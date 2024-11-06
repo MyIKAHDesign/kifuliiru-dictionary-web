@@ -87,7 +87,7 @@ export default function HeroSection() {
           {/* Hero text with enhanced contrast */}
           <h1 className="font-playfair mb-8 relative">
             <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-white block mb-4 drop-shadow-lg">
-              Discover the Beauty of the
+              Discover the Beauty of
             </span>
             <span
               className="text-5xl sm:text-6xl md:text-7xl font-bold text-transparent bg-clip-text 
