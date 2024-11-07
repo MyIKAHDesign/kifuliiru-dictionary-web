@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/app/components/ui/card";
 import {
   Tabs,
@@ -8,6 +8,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/app/components/ui/tabs";
+import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
 import {
   History,
@@ -34,6 +35,7 @@ interface InfoCardProps {
   title: string;
   content: string;
   icon: LucideIcon;
+  delay?: number;
 }
 
 interface FactItem {
@@ -52,16 +54,35 @@ interface FeatureItem {
   desc: string;
 }
 
-const InfoCard: React.FC<InfoCardProps> = ({ title, content, icon: Icon }) => (
-  <Card className="mb-6 hover:shadow-lg transition-all duration-300">
-    <CardContent className="p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <Icon className="h-6 w-6 text-indigo-600" />
-        <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-      </div>
-      <p className="text-gray-600 leading-relaxed">{content}</p>
-    </CardContent>
-  </Card>
+const InfoCard: React.FC<InfoCardProps> = ({
+  title,
+  content,
+  icon: Icon,
+  delay = 0,
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ delay }}
+  >
+    <Card className="mb-6 hover:shadow-lg transition-all duration-300 overflow-hidden group">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <motion.div
+            initial={{ rotate: 0 }}
+            whileHover={{ rotate: 360 }}
+            transition={{ duration: 0.5 }}
+            className="p-2 bg-indigo-50 rounded-lg"
+          >
+            <Icon className="h-6 w-6 text-indigo-600" />
+          </motion.div>
+          <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
+        </div>
+        <p className="text-gray-600 leading-relaxed">{content}</p>
+      </CardContent>
+    </Card>
+  </motion.div>
 );
 
 const KeyFacts: React.FC = () => {
@@ -73,19 +94,36 @@ const KeyFacts: React.FC = () => {
   ];
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Key Facts</h3>
-        <div className="space-y-3">
-          {facts.map((fact, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <span className="text-gray-600">{fact.title}</span>
-              <span className="font-medium text-indigo-600">{fact.value}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+    >
+      <Card className="mb-6 overflow-hidden">
+        <CardContent className="p-6">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Key Facts
+          </h3>
+          <div className="space-y-3">
+            {facts.map((fact, index) => (
+              <motion.div
+                key={index}
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ x: 5 }}
+                className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50"
+              >
+                <span className="text-gray-600">{fact.title}</span>
+                <span className="font-medium bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">
+                  {fact.value}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
@@ -100,23 +138,48 @@ const CultureGrid: React.FC = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       {items.map((item, index) => (
-        <Card
+        <motion.div
           key={index}
-          className="hover:shadow-lg transition-all duration-300"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ y: -5 }}
         >
-          <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-            <item.icon className="h-12 w-12 text-indigo-600 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800">
-              {item.title}
-            </h3>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-all duration-300 overflow-hidden group">
+            <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <item.icon className="h-12 w-12 text-indigo-600 mb-4 transform transition-transform group-hover:scale-110" />
+              </motion.div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {item.title}
+              </h3>
+            </CardContent>
+          </Card>
+        </motion.div>
       ))}
     </div>
   );
 };
 
 const AbafuliiruPage: React.FC = () => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const currentProgress = window.scrollY;
+      setScrollProgress((currentProgress / totalScroll) * 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const geographyFeatures: FeatureItem[] = [
     {
       title: "Mountains",
@@ -147,53 +210,95 @@ const AbafuliiruPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* Progress Bar */}
+      <div
+        className="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 z-50 transition-all duration-300"
+        style={{ width: `${scrollProgress}%` }}
+      />
+
       <Header />
-      <div className="bg-indigo-900 text-white">
-        <div className="relative h-[300px] flex items-end justify-center pb-12 bg-gradient-to-b from-indigo-800 to-indigo-900">
-          <div className="absolute inset-0 flex items-center justify-center opacity-10">
-            <Users className="w-32 h-32" />
+
+      {/* Enhanced Hero Section */}
+      <div className="bg-indigo-900 text-white relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          className="relative h-[400px] flex items-end justify-center pb-12 
+                     bg-gradient-to-b from-indigo-800 to-indigo-900"
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              initial={{ scale: 1 }}
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 10, repeat: Infinity }}
+              className="opacity-10"
+            >
+              <Users className="w-64 h-64" />
+            </motion.div>
           </div>
-          <h1 className="text-4xl font-bold relative z-10">
-            The Abafuliiru People
-          </h1>
-        </div>
+          <div className="text-center z-10">
+            <motion.h1
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-5xl font-bold mb-4"
+            >
+              The Abafuliiru People
+            </motion.h1>
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-xl text-indigo-200"
+            >
+              Discover our rich cultural heritage and traditions
+            </motion.p>
+          </div>
+        </motion.div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-12">
         <Tabs defaultValue="history" className="w-full">
-          <TabsList className="w-full justify-start mb-8">
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              History
-            </TabsTrigger>
-            <TabsTrigger value="culture" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Culture
-            </TabsTrigger>
-            <TabsTrigger value="geography" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Geography
-            </TabsTrigger>
-            <TabsTrigger value="language" className="flex items-center gap-2">
-              <Languages className="h-4 w-4" />
-              Language
-            </TabsTrigger>
-          </TabsList>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <TabsList className="w-full justify-start mb-8">
+              {[
+                { value: "history", icon: History, label: "History" },
+                { value: "culture", icon: Users, label: "Culture" },
+                { value: "geography", icon: MapPin, label: "Geography" },
+                { value: "language", icon: Languages, label: "Language" },
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="flex items-center gap-2 transition-all duration-300"
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </motion.div>
 
           <TabsContent value="history">
             <InfoCard
               icon={History}
               title="Historical Background"
               content="The Abafuliiru people have a rich history dating back centuries, with a strong tradition of community leadership and cultural preservation. Their historical narrative is deeply intertwined with the development of the eastern regions of the Democratic Republic of Congo."
+              delay={0.1}
             />
             <KeyFacts />
             <InfoCard
               icon={Calendar}
               title="Timeline"
               content="Throughout their history, the Abafuliiru have maintained their cultural identity while adapting to changing times. Key historical events include their establishment in the current region, interactions with neighboring communities, and preservation of traditional governance systems."
+              delay={0.2}
             />
           </TabsContent>
 
@@ -217,17 +322,31 @@ const AbafuliiruPage: React.FC = () => {
               title="Location"
               content="The Abafuliiru people primarily inhabit the eastern regions of the Democratic Republic of Congo, particularly in and around the South Kivu province. Their traditional lands include mountainous areas and fertile valleys."
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               {geographyFeatures.map((feature, index) => (
-                <Card key={index}>
-                  <CardContent className="p-6">
-                    <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
-                    <h3 className="font-semibold text-gray-800 mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600">{feature.desc}</p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -5 }}
+                >
+                  <Card className="h-full">
+                    <CardContent className="p-6">
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
+                      </motion.div>
+                      <h3 className="font-semibold text-gray-800 mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-gray-600">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </TabsContent>
@@ -240,15 +359,29 @@ const AbafuliiruPage: React.FC = () => {
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {languageFeatures.map((feature, index) => (
-                <Card key={index}>
-                  <CardContent className="p-6">
-                    <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
-                    <h3 className="font-semibold text-gray-800 mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600">{feature.desc}</p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -5 }}
+                >
+                  <Card className="h-full hover:shadow-lg transition-all duration-300">
+                    <CardContent className="p-6">
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
+                      </motion.div>
+                      <h3 className="font-semibold text-gray-800 mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-gray-600">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </TabsContent>
