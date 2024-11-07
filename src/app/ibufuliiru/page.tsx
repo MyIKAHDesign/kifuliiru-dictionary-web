@@ -3,6 +3,8 @@
 import React from "react";
 import Image from "next/image";
 import { MapPin, Mountain, Cloud, Trees, Home, Flag } from "lucide-react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-2xl font-bold text-gray-800 mb-4">{children}</h2>
@@ -28,8 +30,9 @@ const InfoCard = ({
 
 export default function IbufuliiruPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section */}
+      <Header />
       <div className="relative h-[400px] overflow-hidden">
         <Image
           src="/homeland-hero-section.jpg" // Use a relevant landscape image
@@ -150,6 +153,7 @@ export default function IbufuliiruPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

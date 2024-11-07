@@ -4,6 +4,8 @@
 import React from "react";
 import Image from "next/image";
 import { Book, GraduationCap, Languages, History } from "lucide-react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 // Components for reusability
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -30,8 +32,9 @@ const InfoCard = ({
 
 export default function KifuliiruPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section */}
+      <Header />
       <div className="relative h-[400px] overflow-hidden">
         <Image
           src="/language-hero.jpg" // You should use a relevant image
@@ -152,6 +155,7 @@ export default function KifuliiruPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

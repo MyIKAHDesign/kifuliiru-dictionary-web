@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Menu from "../components/Header";
 import Footer from "../components/Footer";
 import { FaSearch } from "react-icons/fa";
 import WordCard from "../components/WordCard";
 import { DictionaryModal } from "../components/DictionaryModal";
 import { Language, WordWithTranslations } from "../data/types/dictionary";
 import { LanguageSelector } from "../components/LanguageSelector";
+import Header from "../components/Header";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
@@ -106,7 +106,7 @@ export default function DictionaryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <Menu />
+      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
         {/* Hero Section with Language Selector */}

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Card, CardContent } from "@/app/components/ui/card";
 import {
@@ -25,6 +27,8 @@ import {
   Brush,
   BookOpen,
 } from "lucide-react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 interface InfoCardProps {
   title: string;
@@ -143,8 +147,9 @@ const AbafuliiruPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section */}
+      <Header />
       <div className="bg-indigo-900 text-white">
         <div className="relative h-[300px] flex items-end justify-center pb-12 bg-gradient-to-b from-indigo-800 to-indigo-900">
           <div className="absolute inset-0 flex items-center justify-center opacity-10">
@@ -249,6 +254,7 @@ const AbafuliiruPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer />
     </div>
   );
 };

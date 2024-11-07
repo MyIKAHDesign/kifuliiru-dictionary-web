@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 interface FormData {
   word: string;
@@ -45,7 +47,8 @@ export default function Contribute() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-10">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <Header />
       <div className="container mx-auto max-w-2xl p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-3xl font-bold text-indigo-700 mb-6 text-center">
           Contribute to the Kifuliiru Dictionary
@@ -152,6 +155,7 @@ export default function Contribute() {
           </button>
         </form>
       </div>
+      <Footer />
     </div>
   );
 }
