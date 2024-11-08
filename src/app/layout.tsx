@@ -1,7 +1,9 @@
+// app/layout.tsx
 import { AuthProvider } from "./lib/firebase/auth";
 import { FirebaseProvider } from "./lib/firebase/context";
 import "./globals.css";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
+import type { Metadata } from "next";
 
 // Configure Playfair Display for headings
 const playfair = Playfair_Display({
@@ -19,17 +21,30 @@ const sourceSans = Source_Sans_3({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+// Add metadata
+export const metadata: Metadata = {
+  title: "Kifuliiru Dictionary",
+  description: "Discover the beauty of the Kifuliiru language",
+  keywords: ["Kifuliiru", "dictionary", "language", "learning", "translation"],
+};
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${sourceSans.variable}`}>
-      <body className="min-h-screen flex flex-col">
+    <html
+      lang="en"
+      className={`${playfair.variable} ${sourceSans.variable}`}
+      suppressHydrationWarning
+    >
+      <body
+        className={`min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased`}
+      >
         <FirebaseProvider>
           <AuthProvider>
-            <div className="flex flex-col min-h-screen">{children}</div>
+            <main className="flex flex-col min-h-screen">{children}</main>
           </AuthProvider>
         </FirebaseProvider>
       </body>
