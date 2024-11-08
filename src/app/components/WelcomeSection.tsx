@@ -136,7 +136,7 @@ export default function HeroSection() {
                        transform hover:-translate-y-1 hover:shadow-lg hover:shadow-white/20"
             >
               <BarChart3 className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-              Learn More
+              Learn More Here
               <ArrowRight className="w-4 h-4 transition-all duration-300 group-hover:translate-x-1" />
             </button>
 
