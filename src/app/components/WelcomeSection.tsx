@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BarChart3, Book } from "lucide-react";
 import { useScrollTo } from "../hooks/useScrollTo";
@@ -7,7 +7,8 @@ import Image from "next/image";
 export default function HeroSection() {
   const scrollTo = useScrollTo();
   const parallaxRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(true);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let ticking = false;
@@ -16,34 +17,32 @@ export default function HeroSection() {
     const handleScroll = () => {
       if (!ticking) {
         animationFrameId = requestAnimationFrame(() => {
-          if (parallaxRef.current && overlayRef.current) {
+          if (parallaxRef.current) {
             const scrolled = window.pageYOffset;
-            const parallaxSpeed = -0.15; // Reduced speed for subtlety
+            const parallaxSpeed = -0.15;
 
-            // Smooth transform with cubic-bezier
             parallaxRef.current.style.transform = `translate3d(0, ${
               scrolled * parallaxSpeed
             }px, 0)`;
-            overlayRef.current.style.transform = `translate3d(0, ${
-              scrolled * parallaxSpeed * 0.5
-            }px, 0)`;
           }
+
+          if (heroRef.current) {
+            const heroHeight = heroRef.current.offsetHeight;
+            const scrollPosition = window.scrollY;
+            setShowScrollButton(scrollPosition < heroHeight * 0.8);
+          }
+
           ticking = false;
         });
       }
       ticking = true;
     };
 
-    // Add passive scroll listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    // Apply initial styles
-    if (parallaxRef.current && overlayRef.current) {
+    if (parallaxRef.current) {
       parallaxRef.current.style.willChange = "transform";
       parallaxRef.current.style.transition =
-        "transform 0.1s cubic-bezier(0.33, 1, 0.68, 1)";
-      overlayRef.current.style.willChange = "transform";
-      overlayRef.current.style.transition =
         "transform 0.1s cubic-bezier(0.33, 1, 0.68, 1)";
     }
 
@@ -56,10 +55,18 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <div className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Background Image Layer */}
+    <div
+      ref={heroRef}
+      className="relative min-h-screen flex items-center overflow-hidden"
+    >
+      {/* Background Container with Parallax */}
       <div className="absolute inset-0 z-0">
-        <div ref={parallaxRef} className="absolute inset-0">
+        {/* Image Container with Parallax */}
+        <div
+          ref={parallaxRef}
+          className="absolute inset-0 transform-gpu"
+          style={{ transformStyle: "preserve-3d" }}
+        >
           <Image
             src="/hero-library.jpg"
             alt="Library background"
@@ -73,10 +80,24 @@ export default function HeroSection() {
           />
         </div>
 
-        {/* Overlay layers */}
-        <div ref={overlayRef} className="absolute inset-0">
+        {/* Fixed Overlay Container */}
+        <div
+          className="absolute inset-0"
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          {/* Dark overlay */}
           <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-0 backdrop-blur-[2px]" />
+
+          {/* Blur overlay */}
+          <div
+            className="absolute inset-0 backdrop-blur-[2px]"
+            style={{
+              backfaceVisibility: "hidden",
+              transform: "translateZ(0)",
+            }}
+          />
+
+          {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/50 via-gray-900/40 to-gray-900/60" />
         </div>
       </div>
@@ -93,7 +114,7 @@ export default function HeroSection() {
               className="text-5xl sm:text-6xl md:text-7xl font-bold text-transparent bg-clip-text 
                            bg-gradient-to-r from-yellow-200 via-yellow-100 to-yellow-50 drop-shadow-lg"
             >
-              Kifuliiru Language
+              the Kifuliiru Language
             </span>
           </h1>
 
@@ -135,21 +156,25 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <button
-        onClick={() => scrollTo("stats")}
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 cursor-pointer
-                 animate-bounce hover:opacity-90 transition-opacity duration-300 z-20"
-        aria-label="Scroll to statistics"
-      >
-        <div
-          className="w-8 h-14 rounded-full border-2 border-white/80 p-2 flex justify-center
-                      backdrop-blur-sm bg-white/10 hover:bg-white/20
-                      transition-all duration-300"
+      {/* Improved scroll indicator */}
+      {showScrollButton && (
+        <button
+          onClick={() => scrollTo("stats")}
+          className="fixed md:absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 
+                   cursor-pointer transition-all duration-300 z-20
+                   opacity-90 hover:opacity-100 focus:outline-none focus:ring-2 
+                   focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent"
+          aria-label="Scroll to statistics"
         >
-          <div className="w-1 h-3 bg-white rounded-full animate-pulse" />
-        </div>
-      </button>
+          <div
+            className="w-10 h-12 md:w-8 md:h-14 rounded-full border-2 border-white/80 
+                    backdrop-blur-sm bg-white/10 hover:bg-white/20
+                    transition-all duration-300 flex items-center justify-center"
+          >
+            <div className="w-1.5 md:w-1 h-4 md:h-3 bg-white rounded-full animate-pulse" />
+          </div>
+        </button>
+      )}
     </div>
   );
 }

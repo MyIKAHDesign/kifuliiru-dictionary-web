@@ -14,6 +14,7 @@ const protectedRoutes = [
 // Define public routes that should always be accessible
 const publicRoutes = [
   "/",
+  "home",
   "/browse",
   "/word",
   "/about",
