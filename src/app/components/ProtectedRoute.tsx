@@ -1,28 +1,36 @@
-// src/app/components/ProtectedRoute.tsx
-
+// components/ProtectedRoute.tsx
 "use client";
 
 import { useAuth } from "@/app/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect if user is explicitly `null` (unauthenticated), not `undefined` (loading)
-    if (user === null) {
-      router.push("/auth/login");
+    if (!loading && !user) {
+      router.push("/auth/login?redirect=" + window.location.pathname);
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  if (user === undefined) return null; // Show nothing while user state is loading
-  if (user === null) return null; // Avoid rendering content for unauthenticated users
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
-  return <>{children}</>; // Render content for authenticated users
+  if (!user) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
