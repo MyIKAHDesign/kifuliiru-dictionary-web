@@ -110,29 +110,30 @@ export default function DictionaryPage() {
 
       <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
         {/* Hero Section with Language Selector */}
-        <section className="text-center mb-8 relative">
-          <div className="absolute right-0 top-0">
+        <section className="mb-8 flex flex-col items-center">
+          <div className="text-center max-w-2xl mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+              Kifuliiru Dictionary
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300">
+              {language === "kifuliiru"
+                ? "Menya amagambo geꞌKifuliiru mu njira nyororo"
+                : language === "swahili"
+                ? "Gundua utajiri wa lugha ya Kifuliiru"
+                : language === "french"
+                ? "Découvrez la richesse de la langue Kifuliiru"
+                : "Discover the richness of Kifuliiru language"}
+            </p>
+          </div>
+          <div className="w-full max-w-xs">
             <LanguageSelector
               value={language}
               onChange={(newLang) => setLanguage(newLang)}
             />
           </div>
-
-          <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-            Kifuliiru Dictionary
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            {language === "kifuliiru"
-              ? "Menya amagambo geꞌKifuliiru mu njira nyororo"
-              : language === "swahili"
-              ? "Gundua utajiri wa lugha ya Kifuliiru"
-              : language === "french"
-              ? "Découvrez la richesse de la langue Kifuliiru"
-              : "Discover the richness of Kifuliiru language"}
-          </p>
         </section>
 
-        {/* Search and Filters sections remain largely the same, just updated with new types */}
+        {/* Search and Filters sections */}
         <section className="max-w-3xl mx-auto mb-8 w-full">
           <div className="relative group">
             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
