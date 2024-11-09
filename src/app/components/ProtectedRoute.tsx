@@ -1,4 +1,3 @@
-// components/ProtectedRoute.tsx
 "use client";
 
 import { useAuth } from "@/app/lib/firebase/auth";
@@ -16,7 +15,7 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/auth/login?redirect=" + window.location.pathname);
+      router.push(`/auth/login?redirect=${window.location.pathname}`);
     }
   }, [user, loading, router]);
 

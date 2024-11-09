@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Mail, Facebook } from "lucide-react";
-import Link from "next/link";
 import { useAuth } from "@/app/lib/firebase/auth";
 
 const GoogleIcon = () => (
@@ -32,12 +32,19 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function SignUpPage() {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+  });
   const [loading, setLoading] = useState(false);
+  const [passwordMatchError, setPasswordMatchError] = useState<string | null>(
+    null
+  );
 
-  const { signIn, signInWithGoogle, signInWithFacebook, error, user } =
+  const { signUp, signInWithGoogle, signInWithFacebook, error, user } =
     useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,9 +58,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordMatchError("Passwords do not match");
+      return;
+    }
+    setPasswordMatchError(null);
     setLoading(true);
+
     try {
-      await signIn(email, password);
+      await signUp(formData.email, formData.password, formData.name);
       router.push(redirectPath);
     } finally {
       setLoading(false);
@@ -84,14 +97,36 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Join Kifuliiru Dictionary
+          </h1>
           <p className="mt-2 text-gray-600">
-            Sign in to continue to Kifuliiru Dictionary
+            Create an account to contribute and access all features
           </p>
         </div>
 
         <div className="bg-white p-8 rounded-lg shadow-md">
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="John Doe"
+                required
+              />
+            </div>
+
             <div>
               <label
                 htmlFor="email"
@@ -102,8 +137,10 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="you@example.com"
                 required
@@ -120,17 +157,41 @@ export default function LoginPage() {
               <input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="••••••••"
                 required
               />
             </div>
 
-            {error && (
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            {(passwordMatchError || error) && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{error}</p>
+                <p className="text-sm text-red-600">
+                  {passwordMatchError || error}
+                </p>
               </div>
             )}
 
@@ -147,41 +208,15 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Signing In...
+                  Creating Account...
                 </>
               ) : (
                 <>
                   <Mail className="h-5 w-5 mr-2" />
-                  Sign In with Email
+                  Sign Up with Email
                 </>
               )}
             </button>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-900"
-                >
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <Link
-                  href="/auth/forgot-password"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
-            </div>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
@@ -218,12 +253,12 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
+              Already have an account?{" "}
               <Link
-                href={`/auth/signup?redirect=${redirectPath}`}
+                href={`/auth/login?redirect=${redirectPath}`}
                 className="text-indigo-600 hover:text-indigo-500"
               >
-                Sign up
+                Sign in
               </Link>
             </p>
           </div>
