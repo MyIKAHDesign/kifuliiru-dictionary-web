@@ -14,11 +14,16 @@ const Footer = () => {
 
   const socialLinks: SocialLink[] = [
     { id: "1", icon: FaGithub, href: "#", label: "GitHub" },
-    { id: "2", icon: FaTwitter, href: "#", label: "Twitter" },
+    {
+      id: "2",
+      icon: FaTwitter,
+      href: "https://x.com/ayivugwekabemba",
+      label: "Twitter",
+    },
     {
       id: "3",
       icon: FaEnvelope,
-      href: "mailto:contact@kifuliiru.org",
+      href: "mailto:imyazimukifuliiru@gmail.com",
       label: "Email",
     },
   ];
