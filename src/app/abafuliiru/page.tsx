@@ -28,9 +28,10 @@ import {
   Brush,
   BookOpen,
 } from "lucide-react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 
+// Interfaces
 interface InfoCardProps {
   title: string;
   content: string;
@@ -54,6 +55,7 @@ interface FeatureItem {
   desc: string;
 }
 
+// Components
 const InfoCard: React.FC<InfoCardProps> = ({
   title,
   content,
@@ -73,13 +75,17 @@ const InfoCard: React.FC<InfoCardProps> = ({
             initial={{ rotate: 0 }}
             whileHover={{ rotate: 360 }}
             transition={{ duration: 0.5 }}
-            className="p-2 bg-indigo-50 rounded-lg"
+            className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg"
           >
-            <Icon className="h-6 w-6 text-indigo-600" />
+            <Icon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
           </motion.div>
-          <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+            {title}
+          </h3>
         </div>
-        <p className="text-gray-600 leading-relaxed">{content}</p>
+        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+          {content}
+        </p>
       </CardContent>
     </Card>
   </motion.div>
@@ -101,7 +107,7 @@ const KeyFacts: React.FC = () => {
     >
       <Card className="mb-6 overflow-hidden">
         <CardContent className="p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
             Key Facts
           </h3>
           <div className="space-y-3">
@@ -112,10 +118,12 @@ const KeyFacts: React.FC = () => {
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ x: 5 }}
-                className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50"
+                className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                <span className="text-gray-600">{fact.title}</span>
-                <span className="font-medium bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">
+                <span className="text-gray-600 dark:text-gray-400">
+                  {fact.title}
+                </span>
+                <span className="font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full">
                   {fact.value}
                 </span>
               </motion.div>
@@ -152,9 +160,9 @@ const CultureGrid: React.FC = () => {
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <item.icon className="h-12 w-12 text-indigo-600 mb-4 transform transition-transform group-hover:scale-110" />
+                <item.icon className="h-12 w-12 text-indigo-600 dark:text-indigo-400 mb-4 transform transition-transform group-hover:scale-110" />
               </motion.div>
-              <h3 className="text-lg font-semibold text-gray-800">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                 {item.title}
               </h3>
             </CardContent>
@@ -184,33 +192,45 @@ const AbafuliiruPage: React.FC = () => {
     {
       title: "Mountains",
       icon: Mountain,
-      desc: "Home to significant mountain ranges",
+      desc: "Sacred peaks including Mount Mitumba",
     },
-    { title: "Rivers", icon: Waves, desc: "Major river systems" },
-    { title: "Forests", icon: TreePine, desc: "Dense forest regions" },
+    {
+      title: "Rivers",
+      icon: Waves,
+      desc: "Life-giving Ruzizi River and tributaries",
+    },
+    {
+      title: "Forests",
+      icon: TreePine,
+      desc: "Ancient medicinal forest groves",
+    },
   ];
 
   const languageFeatures: FeatureItem[] = [
     {
       title: "Oral Traditions",
       icon: Book,
-      desc: "Rich storytelling heritage",
+      desc: "Centuries of stories and wisdom",
     },
     {
       title: "Writing System",
       icon: Pen,
-      desc: "Modern transcription methods",
+      desc: "Modern Kifuliiru transcription",
     },
-    { title: "Regional Variations", icon: Globe, desc: "Dialectal diversity" },
+    {
+      title: "Regional Variations",
+      icon: Globe,
+      desc: "Rich dialectal heritage",
+    },
     {
       title: "Modern Usage",
       icon: Smartphone,
-      desc: "Contemporary applications",
+      desc: "Digital language preservation",
     },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       {/* Progress Bar */}
       <div
         className="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 z-50 transition-all duration-300"
@@ -219,7 +239,7 @@ const AbafuliiruPage: React.FC = () => {
 
       <Header />
 
-      {/* Enhanced Hero Section */}
+      {/* Hero Section */}
       <div className="bg-indigo-900 text-white relative overflow-hidden">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -266,8 +286,9 @@ const AbafuliiruPage: React.FC = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6 }}
+            className="sticky top-4 z-40 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-lg p-2 mb-8"
           >
-            <TabsList className="w-full justify-start mb-8">
+            <TabsList className="w-full flex justify-start gap-2 p-1 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg">
               {[
                 { value: "history", icon: History, label: "History" },
                 { value: "culture", icon: Users, label: "Culture" },
@@ -277,16 +298,55 @@ const AbafuliiruPage: React.FC = () => {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="flex items-center gap-2 transition-all duration-300"
+                  className={`
+            flex items-center gap-2 px-4 py-2.5 rounded-lg flex-1
+            font-medium text-sm
+            transition-all duration-300 ease-in-out
+            data-[state=inactive]:bg-transparent
+            data-[state=inactive]:text-gray-600
+            data-[state=inactive]:dark:text-gray-400
+            data-[state=inactive]:hover:bg-white/60
+            data-[state=inactive]:dark:hover:bg-gray-800/60
+            data-[state=inactive]:hover:text-gray-900
+            data-[state=inactive]:dark:hover:text-gray-200
+            data-[state=active]:bg-white
+            data-[state=active]:dark:bg-gray-800
+            data-[state=active]:text-indigo-600
+            data-[state=active]:dark:text-indigo-400
+            data-[state=active]:shadow-sm
+            data-[state=active]:scale-[1.02]
+            hover:scale-[1.02]
+            active:scale-[0.98]
+            outline-none
+            ring-offset-2
+            ring-offset-white
+            dark:ring-offset-gray-900
+            focus-visible:ring-2
+            focus-visible:ring-indigo-500
+            dark:focus-visible:ring-indigo-400
+          `}
                 >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
+                  <tab.icon className="h-4 w-4 flex-shrink-0 transition-transform group-hover:scale-110" />
+                  <span className="truncate">{tab.label}</span>
+
+                  <span className="ml-auto flex h-2 w-2">
+                    <span
+                      className={`
+              animate-pulse h-full w-full rounded-full
+              data-[state=active]:bg-indigo-600/50
+              dark:data-[state=active]:bg-indigo-400/50
+            `}
+                    />
+                  </span>
                 </TabsTrigger>
               ))}
             </TabsList>
           </motion.div>
 
-          <TabsContent value="history">
+          <TabsContent
+            value="history"
+            className="space-y-6 animate-in slide-in-from-bottom duration-300 ease-in-out"
+          >
             <InfoCard
               icon={History}
               title="Historical Background"
@@ -302,7 +362,10 @@ const AbafuliiruPage: React.FC = () => {
             />
           </TabsContent>
 
-          <TabsContent value="culture">
+          <TabsContent
+            value="culture"
+            className="space-y-6 animate-in slide-in-from-bottom duration-300 ease-in-out"
+          >
             <InfoCard
               icon={Users}
               title="Cultural Heritage"
@@ -316,7 +379,10 @@ const AbafuliiruPage: React.FC = () => {
             />
           </TabsContent>
 
-          <TabsContent value="geography">
+          <TabsContent
+            value="geography"
+            className="space-y-6 animate-in slide-in-from-bottom duration-300 ease-in-out"
+          >
             <InfoCard
               icon={MapPin}
               title="Location"
@@ -338,12 +404,14 @@ const AbafuliiruPage: React.FC = () => {
                         whileHover={{ scale: 1.1 }}
                         transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
+                        <feature.icon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-3" />
                       </motion.div>
-                      <h3 className="font-semibold text-gray-800 mb-2">
+                      <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">{feature.desc}</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {feature.desc}
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -351,7 +419,10 @@ const AbafuliiruPage: React.FC = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="language">
+          <TabsContent
+            value="language"
+            className="space-y-6 animate-in slide-in-from-bottom duration-300 ease-in-out"
+          >
             <InfoCard
               icon={Languages}
               title="Linguistics"
@@ -373,12 +444,14 @@ const AbafuliiruPage: React.FC = () => {
                         whileHover={{ scale: 1.1 }}
                         transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <feature.icon className="h-8 w-8 text-indigo-600 mb-3" />
+                        <feature.icon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-3" />
                       </motion.div>
-                      <h3 className="font-semibold text-gray-800 mb-2">
+                      <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">{feature.desc}</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {feature.desc}
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -386,7 +459,79 @@ const AbafuliiruPage: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Community Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-12 p-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl"
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Join Our Community
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Connect with others interested in Abafuliiru culture and
+              contribute to preserving our heritage for future generations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Learn Kifuliiru",
+                desc: "Access language learning resources and connect with native speakers",
+                icon: Book,
+              },
+              {
+                title: "Cultural Events",
+                desc: "Participate in traditional ceremonies and community gatherings",
+                icon: Users,
+              },
+              {
+                title: "Digital Archive",
+                desc: "Contribute to our growing collection of cultural documentation",
+                icon: Globe,
+              },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ y: -5 }}
+                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <item.icon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
+
+      {/* Call to Action */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="bg-indigo-900 text-white py-16 mt-12"
+      >
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-4">
+            Help Preserve Our Heritage
+          </h2>
+          <p className="text-indigo-200 mb-8 max-w-2xl mx-auto">
+            Join us in documenting and preserving the rich cultural heritage of
+            the Abafuliiru people for future generations.
+          </p>
+          <button className="bg-white text-indigo-900 px-8 py-3 rounded-full font-semibold hover:bg-indigo-50 transition-colors duration-300">
+            Get Involved
+          </button>
+        </div>
+      </motion.div>
+
       <Footer />
     </div>
   );
