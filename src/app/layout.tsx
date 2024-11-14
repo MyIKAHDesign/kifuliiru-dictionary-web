@@ -1,8 +1,10 @@
+// src/app/layout.tsx
 import { AuthProvider } from "./lib/firebase/auth";
 import { FirebaseProvider } from "./lib/firebase/context";
 import "./globals.css";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
-import type { Metadata } from "next";
+import { Metadata } from "next";
+import { generateMetadata } from "./lib/metadata";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -18,11 +20,21 @@ const sourceSans = Source_Sans_3({
   weight: ["300", "400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Kifuliiru Dictionary",
+export const metadata: Metadata = generateMetadata({
+  title: "Home",
   description: "Discover the beauty of the Kifuliiru language",
   keywords: ["Kifuliiru", "dictionary", "language", "learning", "translation"],
-};
+  openGraph: {
+    images: [
+      {
+        url: "/images/home-og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Kifuliiru Dictionary - Language Learning Platform",
+      },
+    ],
+  },
+});
 
 export default function RootLayout({
   children,
