@@ -12,7 +12,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -109,7 +108,6 @@ export default function IbufuliiruPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <Header />
       {/* Progress Bar */}
       <div
         className="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 z-50 transition-all duration-300"

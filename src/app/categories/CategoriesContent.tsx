@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const CategoriesContent = () => {
@@ -70,8 +69,6 @@ const CategoriesContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
-
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">

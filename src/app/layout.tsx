@@ -28,7 +28,7 @@ export const metadata: Metadata = generateMetadata({
   openGraph: {
     images: [
       {
-        url: "/images/home-og.jpg",
+        url: "/images/hero-library.jpg",
         width: 1200,
         height: 630,
         alt: "Kifuliiru Dictionary - Language Learning Platform",
@@ -49,6 +49,9 @@ export default function RootLayout({
         className={`${playfair.variable} ${sourceSans.variable}`}
         suppressHydrationWarning
       >
+        <head>
+          <link rel="icon" href="/favicon.ico" />
+        </head>
         <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
           <Header />
           <main className="flex flex-col min-h-screen">{children}</main>

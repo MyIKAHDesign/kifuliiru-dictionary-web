@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/app/components/ui/dropdown-menu";
 import { numbersData } from "@/app/data/numbers";
-import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 
 // Define valid language options
@@ -61,8 +60,6 @@ export default function NumbersContent() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
-
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">

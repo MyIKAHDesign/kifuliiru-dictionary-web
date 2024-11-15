@@ -15,7 +15,6 @@ import {
   Palmtree,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -157,8 +156,6 @@ export default function KifuliiruPage() {
         className="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 z-50 transition-all duration-300"
         style={{ width: `${scrollProgress}%` }}
       />
-
-      <Header />
 
       {/* Hero Section */}
       <div className="relative h-[600px] overflow-hidden">
