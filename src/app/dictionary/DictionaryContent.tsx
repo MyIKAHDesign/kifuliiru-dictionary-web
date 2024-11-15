@@ -7,7 +7,6 @@ import WordCard from "@/app/components/WordCard";
 import { DictionaryModal } from "@/app/components/DictionaryModal";
 import { Language, WordWithTranslations } from "@/app/data/types/dictionary";
 import { LanguageSelector } from "@/app/components/LanguageSelector";
-import Header from "@/app/components/Header";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
@@ -105,8 +104,6 @@ export default function DictionaryContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <Header />
-
       <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
         {/* Hero Section with Language Selector */}
         <section className="mb-8 flex flex-col items-center">

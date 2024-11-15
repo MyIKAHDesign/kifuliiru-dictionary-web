@@ -1,10 +1,11 @@
 // src/app/layout.tsx
-import { AuthProvider } from "./lib/firebase/auth";
-import { FirebaseProvider } from "./lib/firebase/context";
+
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import { Metadata } from "next";
 import { generateMetadata } from "./lib/metadata";
+import Header from "./components/Header";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -27,7 +28,7 @@ export const metadata: Metadata = generateMetadata({
   openGraph: {
     images: [
       {
-        url: "/images/home-og.jpg",
+        url: "/images/hero-library.jpg",
         width: 1200,
         height: 630,
         alt: "Kifuliiru Dictionary - Language Learning Platform",
@@ -42,18 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${playfair.variable} ${sourceSans.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
-        <FirebaseProvider>
-          <AuthProvider>
-            <main className="flex flex-col min-h-screen">{children}</main>
-          </AuthProvider>
-        </FirebaseProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${playfair.variable} ${sourceSans.variable}`}
+        suppressHydrationWarning
+      >
+        <head>
+          <link rel="icon" href="/favicon.ico" />
+        </head>
+        <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
+          <Header />
+          <main className="flex flex-col min-h-screen">{children}</main>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

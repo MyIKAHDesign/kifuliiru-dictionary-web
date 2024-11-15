@@ -28,7 +28,6 @@ import {
   Brush,
   BookOpen,
 } from "lucide-react";
-import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 
 // Interfaces
@@ -236,8 +235,6 @@ const AbafuliiruPage: React.FC = () => {
         className="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 z-50 transition-all duration-300"
         style={{ width: `${scrollProgress}%` }}
       />
-
-      <Header />
 
       {/* Hero Section */}
       <div className="bg-indigo-900 text-white relative overflow-hidden">

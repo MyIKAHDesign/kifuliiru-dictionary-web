@@ -1,6 +1,9 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserButton, SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import {
   Sun,
   Moon,
@@ -23,7 +26,6 @@ const Header = () => {
   const [isDark, setIsDark] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Navigation links with icons remain the same
   const navigationLinks = [
     { name: "Home", icon: Home, path: "/" },
     { name: "Dictionary", icon: BookOpen, path: "/dictionary" },
@@ -35,7 +37,6 @@ const Header = () => {
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
   ];
 
-  // Rest of your existing useEffect, updateTheme, toggleTheme, and other functions remain the same
   useEffect(() => {
     setMounted(true);
     const darkModePreference = window.matchMedia(
@@ -69,7 +70,6 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // Your existing renderNavLink function remains the same
   const renderNavLink = (
     item: (typeof navigationLinks)[0],
     mobile: boolean = false
@@ -112,16 +112,10 @@ const Header = () => {
 
   return (
     <>
-      {/* Simple Construction Banner */}
-
-      {/* Development Banner */}
       <DevelopmentBanner />
-      {/* Your existing header code remains the same */}
       <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
-        {/* Rest of your existing header JSX remains exactly the same */}
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            {/* Logo */}
             <Link
               href="/"
               className="text-2xl font-bold text-gray-900 dark:text-white hover:text-orange-600 dark:hover:text-orange-400 transition-colors group"
@@ -132,7 +126,6 @@ const Header = () => {
               </span>
             </Link>
 
-            {/* Mobile menu button */}
             <button
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -145,11 +138,9 @@ const Header = () => {
               )}
             </button>
 
-            {/* Desktop navigation */}
             <div className="hidden md:flex items-center space-x-6">
               {navigationLinks.map((item) => renderNavLink(item))}
 
-              {/* Theme toggle button */}
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out group"
@@ -161,15 +152,24 @@ const Header = () => {
                   <Moon className="h-5 w-5 text-gray-600 transition-transform duration-300 ease-in-out group-hover:-rotate-90" />
                 )}
               </button>
+
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors">
+                    Sign In
+                  </button>
+                </SignInButton>
+              </SignedOut>
             </div>
           </div>
 
-          {/* Mobile menu */}
           {isMobileMenuOpen && (
             <div className="md:hidden mt-4 py-4 space-y-4">
               {navigationLinks.map((item) => renderNavLink(item, true))}
 
-              {/* Mobile theme toggle */}
               <button
                 onClick={toggleTheme}
                 className="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out group"
@@ -193,6 +193,21 @@ const Header = () => {
                   )}
                 </span>
               </button>
+
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <SignedIn>
+                  <div className="flex justify-center">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </SignedIn>
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="w-full px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors">
+                      Sign In
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+              </div>
             </div>
           )}
         </div>

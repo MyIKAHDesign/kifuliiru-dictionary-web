@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/app/lib/firebase/auth";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -10,16 +10,16 @@ export default function ProtectedRoute({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { userId, isLoaded } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push(`/auth/login?redirect=${window.location.pathname}`);
+    if (isLoaded && !userId) {
+      router.push(`/sign-in?redirect_url=${window.location.pathname}`);
     }
-  }, [user, loading, router]);
+  }, [userId, isLoaded, router]);
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -27,7 +27,7 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user) {
+  if (!userId) {
     return null;
   }
 

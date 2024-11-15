@@ -30,6 +30,11 @@ export const generateMetadata = (page: PageMetadata): Metadata => {
   return {
     title,
     description,
+    icons: {
+      icon: "/icon.png",
+      shortcut: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+    },
     keywords: [
       "kifuliiru",
       "dictionary",
@@ -37,6 +42,7 @@ export const generateMetadata = (page: PageMetadata): Metadata => {
       "translation",
       ...(page.keywords || []),
     ],
+
     openGraph: {
       type: "website",
       siteName: baseTitle,
@@ -44,7 +50,7 @@ export const generateMetadata = (page: PageMetadata): Metadata => {
       description: page.openGraph?.description || description,
       images: page.openGraph?.images || [
         {
-          url: "/images/kifuliiru-og.jpg",
+          url: "/hero-library.jpg",
           width: 1200,
           height: 630,
           alt: "Kifuliiru Dictionary",
@@ -55,7 +61,7 @@ export const generateMetadata = (page: PageMetadata): Metadata => {
       card: "summary_large_image",
       title,
       description,
-      images: ["/images/kifuliiru-og.jpg"],
+      images: ["/hero-library.jpg"],
     },
   };
 };

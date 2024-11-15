@@ -1,6 +1,7 @@
-import ContributeContent from "../components/ContributeContent";
+import ContributeContent from "./ContributeContent";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { generateMetadata } from "../lib/metadata";
+import Footer from "../components/Footer";
 
 // app/contribute/page.tsx (Contribution Page)
 export const metadata = generateMetadata({
@@ -14,6 +15,7 @@ export default function ContributePage() {
   return (
     <ProtectedRoute>
       <ContributeContent />
+      <Footer />
     </ProtectedRoute>
   );
 }
