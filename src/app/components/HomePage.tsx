@@ -1,7 +1,6 @@
 // src/app/components/HomePage.tsx
 "use client";
 
-import Menu from "./Header";
 import WelcomeSection from "./WelcomeSection";
 import NewWordsSection from "./NewWordsSection";
 import HighlightsSection from "./HighlightsSection";
@@ -20,7 +19,6 @@ interface HomePageProps {
 export default function HomePage({ newWords }: HomePageProps) {
   return (
     <div className="flex flex-col min-h-screen">
-      <Menu />
       <main className="flex-1 flex flex-col bg-lightBackground dark:bg-darkBackground text-lightText dark:text-darkText">
         <WelcomeSection />
         <StatsSection />
