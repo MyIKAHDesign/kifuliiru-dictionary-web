@@ -15,7 +15,7 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     if (isLoaded && !userId) {
-      router.push(`/sign-in?redirect_url=${window.location.pathname}`);
+      router.push(`/auth/sign-in?redirect_url=${window.location.pathname}`);
     }
   }, [userId, isLoaded, router]);
 

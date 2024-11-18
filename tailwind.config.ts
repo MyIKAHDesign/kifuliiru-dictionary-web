@@ -38,13 +38,16 @@ const config: Config = {
       },
       animation: {
         bounce: "bounce 1s infinite",
+
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         gradient: "gradient 15s ease infinite",
         "fade-in": "fadeIn 0.5s ease-out",
         "slide-up": "slideUp 0.5s ease-out",
         "slide-down": "slideDown 0.3s ease-out",
         "spin-slow": "spin 3s linear infinite",
+        "float-slow": "float 8s ease-in-out infinite",
       },
+
       keyframes: {
         bounce: {
           "0%, 100%": {
@@ -56,6 +59,12 @@ const config: Config = {
             animationTimingFunction: "cubic-bezier(0, 0, 0.2, 1)",
           },
         },
+        float: {
+          "0%, 100%": { transform: "translate(0px, 0px)" },
+          "25%": { transform: "translate(-10px, 10px)" },
+          "50%": { transform: "translate(-20px, -10px)" },
+          "75%": { transform: "translate(10px, -20px)" },
+        } as Record<string, { transform: string }>,
         pulse: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
