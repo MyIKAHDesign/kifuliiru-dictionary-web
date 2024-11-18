@@ -3,11 +3,53 @@ import Link from "next/link";
 import { Search, Globe2, ArrowRight, Book } from "lucide-react";
 import { useScrollTo } from "../hooks/useScrollTo";
 
-const CIRCLES = [
-  { width: 180, height: 180, left: 70, top: 85 },
-  { width: 150, height: 150, left: 20, top: 70 },
-  { width: 200, height: 200, left: 40, top: 15 },
-  { width: 160, height: 160, left: 85, top: 90 },
+interface Circle {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+  delay: string;
+  duration: string;
+  opacity: number;
+}
+
+const CIRCLES: Circle[] = [
+  {
+    width: 180,
+    height: 180,
+    left: 70,
+    top: 85,
+    delay: "0s",
+    duration: "8s",
+    opacity: 0.15,
+  },
+  {
+    width: 150,
+    height: 150,
+    left: 20,
+    top: 70,
+    delay: "1s",
+    duration: "9s",
+    opacity: 0.12,
+  },
+  {
+    width: 200,
+    height: 200,
+    left: 40,
+    top: 15,
+    delay: "2s",
+    duration: "10s",
+    opacity: 0.1,
+  },
+  {
+    width: 160,
+    height: 160,
+    left: 85,
+    top: 90,
+    delay: "1.5s",
+    duration: "11s",
+    opacity: 0.13,
+  },
 ];
 
 export default function HeroSection() {
