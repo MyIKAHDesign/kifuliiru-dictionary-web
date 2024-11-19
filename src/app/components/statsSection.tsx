@@ -37,7 +37,7 @@ export default function StatsSection() {
 
   return (
     <section className="py-12 px-4">
-      <div className="container mx-auto">
+      <div id="stats" className="container mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Growing Language Resource

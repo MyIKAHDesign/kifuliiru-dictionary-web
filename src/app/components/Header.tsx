@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import {
   Sun,
   Moon,
@@ -68,6 +68,24 @@ const Header = () => {
 
   const handleMobileMenuClick = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const constructSignInUrl = (returnUrl?: string) => {
+    const baseUrl = "/auth/sign-in";
+    if (!returnUrl) return baseUrl;
+    return `${baseUrl}?redirect_url=${encodeURIComponent(returnUrl)}`;
+  };
+
+  const renderSignInButton = (isMobile: boolean = false) => {
+    const buttonClasses = isMobile
+      ? "w-full px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors"
+      : "px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors";
+
+    return (
+      <Link href={constructSignInUrl(pathname)} className={buttonClasses}>
+        Sign In
+      </Link>
+    );
   };
 
   const renderNavLink = (
@@ -156,13 +174,7 @@ const Header = () => {
               <SignedIn>
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-              </SignedOut>
+              <SignedOut>{renderSignInButton()}</SignedOut>
             </div>
           </div>
 
@@ -200,13 +212,7 @@ const Header = () => {
                     <UserButton afterSignOutUrl="/" />
                   </div>
                 </SignedIn>
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                </SignedOut>
+                <SignedOut>{renderSignInButton(true)}</SignedOut>
               </div>
             </div>
           )}

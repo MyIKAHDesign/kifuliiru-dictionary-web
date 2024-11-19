@@ -44,7 +44,10 @@ const config: Config = {
         "slide-up": "slideUp 0.5s ease-out",
         "slide-down": "slideDown 0.3s ease-out",
         "spin-slow": "spin 3s linear infinite",
+        "float-slow": "float 8s ease-in-out infinite",
+        "float-complex": "floatComplex 20s ease-in-out infinite", // Added new animation
       },
+
       keyframes: {
         bounce: {
           "0%, 100%": {
@@ -56,6 +59,26 @@ const config: Config = {
             animationTimingFunction: "cubic-bezier(0, 0, 0.2, 1)",
           },
         },
+        float: {
+          "0%, 100%": { transform: "translate(0px, 0px)" },
+          "25%": { transform: "translate(-10px, 10px)" },
+          "50%": { transform: "translate(-20px, -10px)" },
+          "75%": { transform: "translate(10px, -20px)" },
+        } as Record<string, { transform: string }>,
+        floatComplex: {
+          "0%, 100%": {
+            transform: "translate(0, 0) rotate(0deg)",
+          },
+          "25%": {
+            transform: "translate(20px, -15px) rotate(2deg)",
+          },
+          "50%": {
+            transform: "translate(-15px, 25px) rotate(-2deg)",
+          },
+          "75%": {
+            transform: "translate(-25px, -10px) rotate(1deg)",
+          },
+        } as Record<string, { transform: string }>,
         pulse: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
@@ -78,6 +101,7 @@ const config: Config = {
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
       },
+
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
