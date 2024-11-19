@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Search, Globe2, ArrowRight, Book } from "lucide-react";
 import { useScrollTo } from "../hooks/useScrollTo";
 
-interface Circle {
+interface Shape {
+  path: string;
   width: number;
   height: number;
   left: number;
@@ -11,44 +12,88 @@ interface Circle {
   delay: string;
   duration: string;
   opacity: number;
+  rotation: number;
+  scale: number;
 }
 
-const CIRCLES: Circle[] = [
+const SHAPES: Shape[] = [
   {
+    // Subtle wave
+    path: "M0,50 Q15,40 30,50 T60,50",
+    width: 200,
+    height: 160,
+    left: 8,
+    top: 18,
+    delay: "0s",
+    duration: "18s",
+    opacity: 0.12,
+    rotation: 35,
+    scale: 0.9,
+  },
+  {
+    // Small rounded triangle
+    path: "M40,10 Q50,0 60,10 L55,40 L40,10",
     width: 180,
     height: 180,
-    left: 70,
-    top: 85,
-    delay: "0s",
-    duration: "8s",
-    opacity: 0.15,
+    left: 75,
+    top: 12,
+    delay: "0.7s",
+    duration: "22s",
+    opacity: 0.08,
+    rotation: -25,
+    scale: 1,
   },
   {
-    width: 150,
-    height: 150,
-    left: 20,
-    top: 70,
-    delay: "1s",
-    duration: "9s",
-    opacity: 0.12,
-  },
-  {
-    width: 200,
-    height: 200,
-    left: 40,
-    top: 15,
-    delay: "2s",
-    duration: "10s",
+    // Mini curved shape
+    path: "M20,50 Q40,20 60,50 Q40,80 20,50",
+    width: 170,
+    height: 170,
+    left: 45,
+    top: 28,
+    delay: "1.2s",
+    duration: "20s",
     opacity: 0.1,
+    rotation: 85,
+    scale: 0.95,
   },
   {
+    // Subtle droplet
+    path: "M50,0 Q70,30 50,60 Q30,30 50,0",
+    width: 190,
+    height: 190,
+    left: 25,
+    top: 8,
+    delay: "0.5s",
+    duration: "24s",
+    opacity: 0.15,
+    rotation: -45,
+    scale: 0.85,
+  },
+  {
+    // Small cross-like shape
+    path: "M40,20 L60,20 L60,40 L40,40 Z",
     width: 160,
     height: 160,
+    left: 65,
+    top: 32,
+    delay: "0.9s",
+    duration: "21s",
+    opacity: 0.09,
+    rotation: 15,
+    scale: 0.8,
+  },
+  {
+    // Tiny circular blob
+    path: "M50,30 C60,30 65,40 65,50 C65,60 60,70 50,70 C40,70 35,60 35,50 C35,40 40,30 50,30",
+    width: 150,
+    height: 150,
     left: 85,
-    top: 90,
+    top: 15,
     delay: "1.5s",
-    duration: "11s",
-    opacity: 0.13,
+    duration: "19s",
+    opacity: 0.11,
+    rotation: -30,
+    scale: 0.75,
   },
 ];
 
@@ -61,6 +106,15 @@ export default function HeroSection() {
 
   useEffect(() => {
     setMounted(true);
+    // Set a timeout to ensure shapes remain visible
+    const timeout = setTimeout(() => {
+      const shapes = document.querySelectorAll(".floating-shape");
+      shapes.forEach((shape) => {
+        (shape as HTMLElement).style.opacity = "1";
+      });
+    }, 100);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -73,7 +127,6 @@ export default function HeroSection() {
           if (parallaxRef.current) {
             const scrolled = window.pageYOffset;
             const parallaxSpeed = -0.15;
-
             parallaxRef.current.style.transform = `translate3d(0, ${
               scrolled * parallaxSpeed
             }px, 0)`;
@@ -92,12 +145,6 @@ export default function HeroSection() {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-
-    if (parallaxRef.current) {
-      parallaxRef.current.style.willChange = "transform";
-      parallaxRef.current.style.transition =
-        "transform 0.1s cubic-bezier(0.33, 1, 0.68, 1)";
-    }
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
@@ -120,7 +167,7 @@ export default function HeroSection() {
       className="relative min-h-screen flex items-center overflow-hidden bg-lightBackground dark:bg-darkBackground"
     >
       {/* Background Container with Parallax */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <div
           ref={parallaxRef}
           className="absolute inset-0 transform-gpu"
@@ -128,25 +175,69 @@ export default function HeroSection() {
         >
           {/* Floating Background Shapes */}
           {mounted && (
-            <div className="absolute inset-0 overflow-hidden">
-              {CIRCLES.map((circle, i) => (
+            <div className="absolute inset-0">
+              {SHAPES.map((shape, i) => (
                 <div
                   key={i}
-                  className="absolute rounded-full animate-float-slow"
+                  className="absolute floating-shape"
                   style={{
-                    width: `${circle.width}px`,
-                    height: `${circle.height}px`,
-                    left: `${circle.left}%`,
-                    top: `${circle.top}%`,
-                    animationDelay: circle.delay,
-                    animationDuration: circle.duration,
-                    background: `radial-gradient(circle at center, 
-                      rgba(14, 165, 233, ${circle.opacity}) 0%,
-                      rgba(14, 165, 233, ${circle.opacity / 2}) 70%,
-                      transparent 100%)`,
+                    width: `${shape.width}px`,
+                    height: `${shape.height}px`,
+                    left: `${shape.left}%`,
+                    top: `${shape.top}%`,
+                    transform: `rotate(${shape.rotation}deg) scale(${shape.scale})`,
+                    transition: "opacity 0.8s ease-in-out",
+                    willChange: "transform",
                   }}
                 >
-                  <div className="absolute inset-0 rounded-full bg-gradient-radial from-primary-300/20 via-primary-400/10 to-transparent dark:from-primary-400/20 dark:via-primary-500/10" />
+                  <div
+                    className="w-full h-full animate-float-complex"
+                    style={{
+                      animationDelay: shape.delay,
+                      animationDuration: shape.duration,
+                    }}
+                  >
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="w-full h-full"
+                      style={{
+                        filter: "blur(1px)",
+                        transform: `scale(${shape.scale})`,
+                      }}
+                    >
+                      <path
+                        d={shape.path}
+                        className="shape-path"
+                        style={{
+                          fill: `url(#gradient-${i})`,
+                        }}
+                      />
+                      <defs>
+                        <linearGradient
+                          id={`gradient-${i}`}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+                          <stop
+                            offset="0%"
+                            style={{
+                              stopColor: "rgb(14, 165, 233)",
+                              stopOpacity: shape.opacity,
+                            }}
+                          />
+                          <stop
+                            offset="100%"
+                            style={{
+                              stopColor: "rgb(56, 189, 248)",
+                              stopOpacity: shape.opacity * 0.6,
+                            }}
+                          />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
                 </div>
               ))}
             </div>
@@ -162,9 +253,9 @@ export default function HeroSection() {
             {languages.map((lang) => (
               <button
                 key={lang.code}
-                className="px-6 py-2 rounded-full bg-mutedWhite dark:bg-darkMuted
+                className="px-6 py-2 rounded-full bg-mutedWhite/80 backdrop-blur-sm dark:bg-darkMuted/80
                          text-primary-600 dark:text-primary-300 text-sm font-medium
-                         hover:bg-primary-50 dark:hover:bg-darkMuted/80 transition-all duration-300
+                         hover:bg-primary-50 dark:hover:bg-darkMuted/60 transition-all duration-300
                          transform hover:-translate-y-0.5 animate-fade-in"
                 style={{ animationDelay: `${languages.indexOf(lang) * 0.1}s` }}
               >
@@ -194,7 +285,7 @@ export default function HeroSection() {
               <input
                 type="text"
                 placeholder="Type a word in any language to begin..."
-                className="w-full px-6 py-4 pl-12 rounded-full bg-mutedWhite dark:bg-darkMuted
+                className="w-full px-6 py-4 pl-12 rounded-full bg-mutedWhite/80 backdrop-blur-sm dark:bg-darkMuted/80
                          text-lightText dark:text-darkText placeholder-lightText/50 dark:placeholder-darkText/50
                          shadow-soft hover:shadow-lg transition-all duration-300
                          focus:outline-none focus:ring-2 focus:ring-primary-500/50"
@@ -221,7 +312,7 @@ export default function HeroSection() {
             <Link
               href="/dictionary"
               className="group inline-flex items-center justify-center gap-2 px-8 py-4 
-                       bg-mutedWhite dark:bg-darkMuted border-2 border-primary-600 dark:border-primary-400
+                       bg-mutedWhite/80 backdrop-blur-sm dark:bg-darkMuted/80 border-2 border-primary-600 dark:border-primary-400
                        text-primary-600 dark:text-primary-400 rounded-full font-medium text-lg 
                        hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all duration-300
                        transform hover:-translate-y-1 hover:shadow-lg"
@@ -239,19 +330,20 @@ export default function HeroSection() {
         <button
           onClick={() => scrollTo("stats")}
           className="fixed md:absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 
-                   cursor-pointer transition-all duration-300 z-20
-                   opacity-90 hover:opacity-100 focus:outline-none focus:ring-2 
-                   focus:ring-primary-500/50 focus:ring-offset-2 focus:ring-offset-transparent
-                   animate-fade-in"
+               cursor-pointer transition-all duration-300 z-20
+               opacity-90 hover:opacity-100 focus:outline-none focus:ring-2 
+               focus:ring-primary-500/50 focus:ring-offset-2 focus:ring-offset-transparent
+               animate-bounce"
           aria-label="Scroll to statistics"
         >
           <div
             className="w-10 h-12 md:w-8 md:h-14 rounded-full border-2 
-                       border-primary-500 dark:border-primary-400
-                       bg-mutedWhite dark:bg-darkMuted hover:bg-primary-50 dark:hover:bg-primary-900/10
-                       transition-all duration-300 flex items-center justify-center"
+                 border-primary-500 dark:border-primary-400
+                 bg-mutedWhite/80 backdrop-blur-sm dark:bg-darkMuted/80 
+                 hover:bg-primary-50 dark:hover:bg-primary-900/10
+                 transition-all duration-300 flex items-center justify-center"
           >
-            <div className="w-1.5 md:w-1 h-4 md:h-3 bg-primary-500 dark:bg-primary-400 rounded-full animate-bounce" />
+            <div className="w-1.5 md:w-1 h-4 md:h-3 bg-primary-500 dark:bg-primary-400 rounded-full" />
           </div>
         </button>
       )}

@@ -30,3 +30,11 @@
   }
 }
 
+.floating-shape {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.floating-shape.visible {
+  opacity: 1;
+}

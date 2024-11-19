@@ -1,6 +1,9 @@
+// app/numbers/page.tsx
+import { Suspense } from "react";
 import { Metadata } from "next";
 import { generateMetadata } from "../lib/metadata";
-import NumbersPage from "./NumbersContent";
+import NumbersContent from "./NumbersContent";
+import { fetchNumbers } from "@/app/lib/supabase";
 
 export const metadata: Metadata = generateMetadata({
   title: "Numbers in Kifuliiru",
@@ -9,6 +12,13 @@ export const metadata: Metadata = generateMetadata({
   keywords: ["kifuliiru numbers", "counting", "numerical system"],
 });
 
-export default function Page() {
-  return <NumbersPage />;
+export default async function Page() {
+  const initialNumbers = await fetchNumbers();
+  console.log("Fetched numbers count:", initialNumbers.length); // Debug log
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NumbersContent initialNumbers={initialNumbers} />
+    </Suspense>
+  );
 }
