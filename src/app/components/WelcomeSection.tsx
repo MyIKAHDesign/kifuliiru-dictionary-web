@@ -88,6 +88,10 @@ export default function HeroSection() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const handleStartLearning = () => {
+    router.push("/numbers");
+  };
+
   useEffect(() => {
     setMounted(true);
     const timeout = setTimeout(() => {
@@ -301,7 +305,7 @@ export default function HeroSection() {
 
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 animate-slide-up">
             <button
-              onClick={() => scrollTo("stats")}
+              onClick={handleStartLearning}
               className="group inline-flex items-center justify-center gap-2 px-8 py-4 
                        bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600
                        text-white rounded-full font-medium text-lg

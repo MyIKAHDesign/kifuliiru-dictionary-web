@@ -1,4 +1,3 @@
-// lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -22,6 +21,7 @@ export interface DictionaryEntry {
   kifaransa: string;
   kingereza: string;
   created_at: string;
+  owner_id: string | null;
 }
 
 // Numbers Interface
@@ -41,7 +41,7 @@ export async function fetchDictionaryWords(): Promise<DictionaryEntry[]> {
     const { data, error } = await supabase
       .from("magambo")
       .select(
-        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at"
+        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at, owner_id"
       )
       .order("igambo", { ascending: true });
 
@@ -64,11 +64,16 @@ export async function searchDictionaryWords(
     const { data, error } = await supabase
       .from("magambo")
       .select(
-        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at"
+        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at, owner_id"
       )
       .or(
-        `igambo.ilike.%${query}%, kifuliiru.ilike.%${query}%, kiswahili.ilike.%${query}%, kingereza.ilike.%${query}%, kifaransa.ilike.%${query}%`
-      );
+        `igambo.ilike.%${query}%, 
+        kifuliiru.ilike.%${query}%, 
+        kiswahili.ilike.%${query}%, 
+        kingereza.ilike.%${query}%, 
+        kifaransa.ilike.%${query}%`
+      )
+      .order("igambo", { ascending: true });
 
     if (error) {
       console.error("Supabase error:", error.message);
