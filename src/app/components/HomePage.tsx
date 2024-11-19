@@ -1,29 +1,18 @@
-// src/app/components/HomePage.tsx
-"use client";
-
-import WelcomeSection from "./WelcomeSection";
-import NewWordsSection from "./NewWordsSection";
-import HighlightsSection from "./HighlightsSection";
-import Footer from "./Footer";
-import DictionaryCTA from "./DictionaryCTA";
+import HighlightsSection from "@/app/components/HighlightsSection";
+import NewWordsSection from "@/app/components/NewWordsSection";
+import DictionaryCTA from "@/app/components/DictionaryCTA";
+import Footer from "@/app/components/Footer";
+import HeroSection from "./WelcomeSection";
 import StatsSection from "./statsSection";
 
-interface HomePageProps {
-  newWords: Array<{
-    term: string;
-    definition: string;
-    date: string;
-  }>;
-}
-
-export default function HomePage({ newWords }: HomePageProps) {
+export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-1 flex flex-col bg-lightBackground dark:bg-darkBackground text-lightText dark:text-darkText">
-        <WelcomeSection />
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <main>
+        <HeroSection />
         <StatsSection />
         <HighlightsSection />
-        <NewWordsSection newWords={newWords} />
+        <NewWordsSection />
         <DictionaryCTA />
       </main>
       <Footer />
