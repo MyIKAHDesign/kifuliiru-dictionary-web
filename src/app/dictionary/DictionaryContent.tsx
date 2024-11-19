@@ -1,46 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Footer from "@/app/components/Footer";
 import { FaSearch } from "react-icons/fa";
 import WordCard from "@/app/components/WordCard";
 import { DictionaryModal } from "@/app/components/DictionaryModal";
-import { Language, WordWithTranslations } from "@/app/data/types/dictionary";
+import { Language } from "@/app/data/types/dictionary";
 import { LanguageSelector } from "@/app/components/LanguageSelector";
+import {
+  DictionaryEntry,
+  fetchDictionaryWords,
+  searchDictionaryWords,
+} from "@/app/lib/supabase";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
 
-const sampleWordsWithTranslations: WordWithTranslations[] = [
-  {
-    term: "Umuundu",
-    definition: {
-      kifuliiru:
-        "Umundu úli mu bandu ábatangwiriri mu mihugo neꞌmigeeza yeꞌkihugo.",
-      english:
-        "A person in the community who plays a significant role in social gatherings and cultural events.",
-      french:
-        "Une personne dans la communauté qui joue un rôle important dans les rassemblements sociaux et les événements culturels.",
-      swahili:
-        "Mtu katika jamii anayechukua nafasi muhimu katika mikusanyiko ya kijamii na matukio ya kitamaduni.",
-    },
-    date: "2024-10-01",
-    audioTermUrl: "/audio/umuundu-term.mp3",
-    audioDefinitionUrl: "/audio/umuundu-definition.mp3",
-    partOfSpeech: "noun",
-    examples: [
-      {
-        kifuliiru: "Umuundu akola mu kyaro kyitu",
-        english: "The person works in our village",
-        french: "La personne travaille dans notre village",
-        swahili: "Mtu anafanya kazi katika kijiji chetu",
-      },
-    ],
-    dialect: "Central Kifuliiru",
-  },
-];
-
-const WORDS_PER_PAGE = 9;
+const WORDS_PER_PAGE = 21;
 
 type AudioPlayingState = {
   wordId: string;
@@ -48,25 +25,64 @@ type AudioPlayingState = {
 } | null;
 
 export default function DictionaryContent() {
+  const searchParams = useSearchParams();
+  const [words, setWords] = useState<DictionaryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleWords, setVisibleWords] = useState(WORDS_PER_PAGE);
-  const [selectedWord, setSelectedWord] = useState<WordWithTranslations | null>(
+  const [selectedWord, setSelectedWord] = useState<DictionaryEntry | null>(
     null
   );
   const [playingAudio, setPlayingAudio] = useState<AudioPlayingState>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [language, setLanguage] = useState<Language>("english");
 
-  const filteredWords = sampleWordsWithTranslations.filter((word) => {
-    const searchInDefinition = word.definition[language]
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const searchInTerm = word.term
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === "all" || word.partOfSpeech === filter;
-    return (searchInDefinition || searchInTerm) && matchesFilter;
-  });
+  // Handle URL query parameter
+  useEffect(() => {
+    const query = searchParams.get("q");
+    if (query) {
+      setSearchTerm(query);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const data = await fetchDictionaryWords();
+        setWords(data);
+      } catch (error) {
+        console.error("Error loading dictionary words:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchTerm.trim()) {
+        const allWords = await fetchDictionaryWords();
+        setWords(allWords);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const results = await searchDictionaryWords(searchTerm);
+        setWords(results);
+      } catch (error) {
+        console.error("Error searching words:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const debounceTimeout = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimeout);
+  }, [searchTerm]);
+
+  const filteredWords = words;
 
   const handlePlayAudio = async (
     url: string,
@@ -77,15 +93,13 @@ export default function DictionaryContent() {
       setPlayingAudio(null);
       return;
     }
+
+    alert("Audio playback coming soon!");
     setPlayingAudio({ wordId, type });
-    const audio = new Audio(url);
-    audio.onended = () => setPlayingAudio(null);
-    try {
-      await audio.play();
-    } catch (error) {
-      console.error("Error playing audio:", error);
+
+    setTimeout(() => {
       setPlayingAudio(null);
-    }
+    }, 1000);
   };
 
   const handleLoadMore = () => {
@@ -105,7 +119,6 @@ export default function DictionaryContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
-        {/* Hero Section with Language Selector */}
         <section className="mb-8 flex flex-col items-center">
           <div className="text-center max-w-2xl mb-6">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
@@ -129,7 +142,6 @@ export default function DictionaryContent() {
           </div>
         </section>
 
-        {/* Search and Filters sections */}
         <section className="max-w-3xl mx-auto mb-8 w-full">
           <div className="relative group">
             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -163,38 +175,40 @@ export default function DictionaryContent() {
           </div>
         </section>
 
-        {/* Words Grid Section */}
         <section className="flex-1 min-h-[500px]">
-          {filteredWords.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+            </div>
+          ) : filteredWords.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {filteredWords.slice(0, visibleWords).map((word, index) => (
                   <WordCard
-                    key={word.term}
-                    word={word}
+                    key={word.id}
+                    word={{
+                      term: word.igambo,
+                      definition: {
+                        kifuliiru: word.kifuliiru,
+                        english: word.kingereza,
+                        french: word.kifaransa,
+                        swahili: word.kiswahili,
+                      },
+                      date: word.created_at,
+                    }}
                     language={language}
                     index={index}
                     isPlayingTerm={
-                      playingAudio?.wordId === word.term &&
+                      playingAudio?.wordId === word.id &&
                       playingAudio?.type === "term"
                     }
                     isPlayingDefinition={
-                      playingAudio?.wordId === word.term &&
+                      playingAudio?.wordId === word.id &&
                       playingAudio?.type === "definition"
                     }
-                    onPlayTermAudio={() =>
-                      handlePlayAudio(
-                        word.audioTermUrl || "",
-                        word.term,
-                        "term"
-                      )
-                    }
+                    onPlayTermAudio={() => handlePlayAudio("", word.id, "term")}
                     onPlayDefinitionAudio={() =>
-                      handlePlayAudio(
-                        word.audioDefinitionUrl || "",
-                        word.term,
-                        "definition"
-                      )
+                      handlePlayAudio("", word.id, "definition")
                     }
                     onShowDetails={() => setSelectedWord(word)}
                   />
@@ -224,32 +238,30 @@ export default function DictionaryContent() {
           )}
         </section>
 
-        {/* Dictionary Modal */}
         {selectedWord && (
           <DictionaryModal
-            word={selectedWord}
+            word={{
+              term: selectedWord.igambo,
+              definition: {
+                kifuliiru: selectedWord.kifuliiru,
+                english: selectedWord.kingereza,
+                french: selectedWord.kifaransa,
+                swahili: selectedWord.kiswahili,
+              },
+              date: selectedWord.created_at,
+            }}
             language={language}
             onClose={() => setSelectedWord(null)}
-            onPlayTermAudio={() =>
-              handlePlayAudio(
-                selectedWord.audioTermUrl || "",
-                selectedWord.term,
-                "term"
-              )
-            }
+            onPlayTermAudio={() => handlePlayAudio("", selectedWord.id, "term")}
             onPlayDefinitionAudio={() =>
-              handlePlayAudio(
-                selectedWord.audioDefinitionUrl || "",
-                selectedWord.term,
-                "definition"
-              )
+              handlePlayAudio("", selectedWord.id, "definition")
             }
             isPlayingTerm={
-              playingAudio?.wordId === selectedWord.term &&
+              playingAudio?.wordId === selectedWord.id &&
               playingAudio?.type === "term"
             }
             isPlayingDefinition={
-              playingAudio?.wordId === selectedWord.term &&
+              playingAudio?.wordId === selectedWord.id &&
               playingAudio?.type === "definition"
             }
           />

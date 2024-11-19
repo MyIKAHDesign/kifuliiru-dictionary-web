@@ -1,24 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Globe2, ArrowRight, Book } from "lucide-react";
 import { useScrollTo } from "../hooks/useScrollTo";
 
-interface Shape {
-  path: string;
-  width: number;
-  height: number;
-  left: number;
-  top: number;
-  delay: string;
-  duration: string;
-  opacity: number;
-  rotation: number;
-  scale: number;
-}
-
-const SHAPES: Shape[] = [
+const SHAPES = [
   {
-    // Subtle wave
     path: "M0,50 Q15,40 30,50 T60,50",
     width: 200,
     height: 160,
@@ -31,7 +18,6 @@ const SHAPES: Shape[] = [
     scale: 0.9,
   },
   {
-    // Small rounded triangle
     path: "M40,10 Q50,0 60,10 L55,40 L40,10",
     width: 180,
     height: 180,
@@ -44,7 +30,6 @@ const SHAPES: Shape[] = [
     scale: 1,
   },
   {
-    // Mini curved shape
     path: "M20,50 Q40,20 60,50 Q40,80 20,50",
     width: 170,
     height: 170,
@@ -57,7 +42,6 @@ const SHAPES: Shape[] = [
     scale: 0.95,
   },
   {
-    // Subtle droplet
     path: "M50,0 Q70,30 50,60 Q30,30 50,0",
     width: 190,
     height: 190,
@@ -70,7 +54,6 @@ const SHAPES: Shape[] = [
     scale: 0.85,
   },
   {
-    // Small cross-like shape
     path: "M40,20 L60,20 L60,40 L40,40 Z",
     width: 160,
     height: 160,
@@ -83,7 +66,6 @@ const SHAPES: Shape[] = [
     scale: 0.8,
   },
   {
-    // Tiny circular blob
     path: "M50,30 C60,30 65,40 65,50 C65,60 60,70 50,70 C40,70 35,60 35,50 C35,40 40,30 50,30",
     width: 150,
     height: 150,
@@ -98,15 +80,16 @@ const SHAPES: Shape[] = [
 ];
 
 export default function HeroSection() {
+  const router = useRouter();
   const scrollTo = useScrollTo();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(true);
   const heroRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setMounted(true);
-    // Set a timeout to ensure shapes remain visible
     const timeout = setTimeout(() => {
       const shapes = document.querySelectorAll(".floating-shape");
       shapes.forEach((shape) => {
@@ -154,6 +137,19 @@ export default function HeroSection() {
     };
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/dictionary?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch(e);
+    }
+  };
+
   const languages = [
     { code: "kf", name: "KIFULIIRU" },
     { code: "en", name: "ENGLISH" },
@@ -164,16 +160,14 @@ export default function HeroSection() {
   return (
     <div
       ref={heroRef}
-      className="relative min-h-screen flex items-center overflow-hidden bg-lightBackground dark:bg-darkBackground"
+      className="relative min-h-[90vh] flex items-center overflow-hidden bg-lightBackground dark:bg-darkBackground"
     >
-      {/* Background Container with Parallax */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div
           ref={parallaxRef}
           className="absolute inset-0 transform-gpu"
           style={{ transformStyle: "preserve-3d" }}
         >
-          {/* Floating Background Shapes */}
           {mounted && (
             <div className="absolute inset-0">
               {SHAPES.map((shape, i) => (
@@ -245,10 +239,8 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="relative z-10 container mx-auto px-4">
         <div className="max-w-6xl mx-auto text-center">
-          {/* Language Pills */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {languages.map((lang) => (
               <button
@@ -264,7 +256,6 @@ export default function HeroSection() {
             ))}
           </div>
 
-          {/* Hero Text */}
           <h1 className="font-playfair mb-8">
             <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary-600 dark:text-primary-400 block mb-4 animate-fade-in">
               Discover the Language
@@ -279,22 +270,35 @@ export default function HeroSection() {
             insights in Kifuliiru, Kiswahili, French, and English.
           </p>
 
-          {/* Search Box */}
-          <div className="relative max-w-2xl mx-auto mb-12 animate-slide-up">
+          <form
+            onSubmit={handleSearch}
+            className="relative max-w-2xl mx-auto mb-12 animate-slide-up"
+          >
             <div className="relative">
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
                 placeholder="Type a word in any language to begin..."
                 className="w-full px-6 py-4 pl-12 rounded-full bg-mutedWhite/80 backdrop-blur-sm dark:bg-darkMuted/80
                          text-lightText dark:text-darkText placeholder-lightText/50 dark:placeholder-darkText/50
                          shadow-soft hover:shadow-lg transition-all duration-300
                          focus:outline-none focus:ring-2 focus:ring-primary-500/50"
               />
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-lightText/50 dark:text-darkText/50 h-5 w-5" />
+              <button
+                type="submit"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 
+                         bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600
+                         text-white rounded-full p-2
+                         transition-all duration-300 hover:scale-105"
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5" />
+              </button>
             </div>
-          </div>
+          </form>
 
-          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 animate-slide-up">
             <button
               onClick={() => scrollTo("stats")}
@@ -325,7 +329,6 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Scroll Indicator */}
       {showScrollButton && (
         <button
           onClick={() => scrollTo("stats")}

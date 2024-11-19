@@ -13,6 +13,18 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+// Dictionary Interfaces
+export interface DictionaryEntry {
+  id: string;
+  igambo: string;
+  kifuliiru: string;
+  kiswahili: string;
+  kifaransa: string;
+  kingereza: string;
+  created_at: string;
+}
+
+// Numbers Interface
 export interface NumberEntry {
   id: number;
   created_at: string;
@@ -23,17 +35,64 @@ export interface NumberEntry {
   kiswahili: string;
 }
 
-// Helper function to fetch numbers
+// Dictionary Methods
+export async function fetchDictionaryWords(): Promise<DictionaryEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("magambo")
+      .select(
+        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at"
+      )
+      .order("igambo", { ascending: true });
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      throw error;
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching dictionary words:", err);
+    return [];
+  }
+}
+
+export async function searchDictionaryWords(
+  query: string
+): Promise<DictionaryEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("magambo")
+      .select(
+        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at"
+      )
+      .or(
+        `igambo.ilike.%${query}%, kifuliiru.ilike.%${query}%, kiswahili.ilike.%${query}%, kingereza.ilike.%${query}%, kifaransa.ilike.%${query}%`
+      );
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      throw error;
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Error searching dictionary words:", err);
+    return [];
+  }
+}
+
+// Numbers Methods
 export async function fetchNumbers(): Promise<NumberEntry[]> {
   try {
     const { data, error } = await supabase
-      .from("kuharura") // Updated table name
+      .from("kuharura")
       .select("*")
       .order("muharuro", { ascending: true });
 
     if (error) {
-      console.error("Supabase error:", error);
-      return [];
+      console.error("Supabase error:", error.message);
+      throw error;
     }
 
     return data || [];
@@ -43,26 +102,28 @@ export async function fetchNumbers(): Promise<NumberEntry[]> {
   }
 }
 
-// Helper function to search numbers
 export async function searchNumbers(query: string): Promise<NumberEntry[]> {
-  const { data, error } = await supabase
-    .from("kuharura") // Updated table name
-    .select("*")
-    .or(
-      `
-      muharuro.ilike.%${query}%,
-      kifuliiru.ilike.%${query}%,
-      kingereza.ilike.%${query}%,
-      kifaransa.ilike.%${query}%,
-      kiswahili.ilike.%${query}%
-    `
-    )
-    .order("muharuro", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("kuharura")
+      .select("*")
+      .or(
+        `muharuro.ilike.%${query}%,
+        kifuliiru.ilike.%${query}%,
+        kingereza.ilike.%${query}%,
+        kifaransa.ilike.%${query}%,
+        kiswahili.ilike.%${query}%`
+      )
+      .order("muharuro", { ascending: true });
 
-  if (error) {
-    console.error("Error searching numbers:", error);
+    if (error) {
+      console.error("Error searching numbers:", error.message);
+      throw error;
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Error searching numbers:", err);
     return [];
   }
-
-  return data || [];
 }
