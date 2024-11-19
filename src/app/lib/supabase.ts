@@ -63,17 +63,11 @@ export async function searchDictionaryWords(
   try {
     const { data, error } = await supabase
       .from("magambo")
-      .select(
-        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at, owner_id"
-      )
+      .select("*")
       .or(
-        `igambo.ilike.%${query}%, 
-        kifuliiru.ilike.%${query}%, 
-        kiswahili.ilike.%${query}%, 
-        kingereza.ilike.%${query}%, 
-        kifaransa.ilike.%${query}%`
+        `igambo.ilike.%${query}%,kifuliiru.ilike.%${query}%,kiswahili.ilike.%${query}%,kingereza.ilike.%${query}%,kifaransa.ilike.%${query}%`
       )
-      .order("igambo", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Supabase error:", error.message);
