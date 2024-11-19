@@ -38,11 +38,27 @@ export default function DictionaryContent() {
   const [language, setLanguage] = useState<Language>("english");
 
   // Handle URL query parameter
+  // Combine search params and initial load effects
   useEffect(() => {
     const query = searchParams.get("q");
-    if (query) {
-      setSearchTerm(query);
-    }
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      try {
+        if (query) {
+          const results = await searchDictionaryWords(query);
+          setSearchTerm(query);
+          setWords(results);
+        } else {
+          const data = await fetchDictionaryWords();
+          setWords(data);
+        }
+      } catch (error) {
+        console.error("Error loading dictionary words:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadInitialData();
   }, [searchParams]);
 
   useEffect(() => {
