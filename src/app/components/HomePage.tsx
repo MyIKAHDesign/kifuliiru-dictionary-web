@@ -1,3 +1,4 @@
+"use client";
 import HighlightsSection from "@/app/components/HighlightsSection";
 import NewWordsSection from "@/app/components/NewWordsSection";
 import DictionaryCTA from "@/app/components/DictionaryCTA";
