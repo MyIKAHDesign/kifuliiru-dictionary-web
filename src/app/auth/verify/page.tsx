@@ -1,4 +1,4 @@
-// app/auth/verify/page.tsx
+/* // app/auth/verify/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -115,3 +115,4 @@ export default function VerifyPage() {
     </div>
   );
 }
+ */
