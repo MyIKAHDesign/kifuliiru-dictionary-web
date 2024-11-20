@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { supabase } from "@/app/lib/supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import {
   Sun,
   Moon,
@@ -17,6 +18,8 @@ import {
   Globe,
   Building,
   Users,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 import DevelopmentBanner from "./DevelopmentBanner";
 
@@ -25,6 +28,7 @@ const Header = () => {
   const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
 
   const navigationLinks = [
     { name: "Home", icon: Home, path: "/" },
@@ -48,6 +52,25 @@ const Header = () => {
       : darkModePreference;
     setIsDark(initialDark);
     updateTheme(initialDark);
+
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+    };
+
+    checkUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const updateTheme = (dark: boolean) => {
@@ -66,14 +89,33 @@ const Header = () => {
     updateTheme(newDark);
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   const handleMobileMenuClick = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const constructSignInUrl = (returnUrl?: string) => {
-    const baseUrl = "/auth/sign-in";
-    if (!returnUrl) return baseUrl;
-    return `${baseUrl}?redirect_url=${encodeURIComponent(returnUrl)}`;
+  const renderUserButton = (isMobile: boolean = false) => {
+    if (!user) return null;
+
+    const buttonClasses = isMobile
+      ? "w-full flex items-center justify-center gap-2 p-2"
+      : "flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors";
+
+    return (
+      <div className="relative group">
+        <button className={buttonClasses}>
+          <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <span className="text-gray-600 dark:text-gray-300">{user.email}</span>
+          <LogOut
+            className="h-5 w-5 text-gray-600 dark:text-gray-300 cursor-pointer"
+            onClick={handleSignOut}
+          />
+        </button>
+      </div>
+    );
   };
 
   const renderSignInButton = (isMobile: boolean = false) => {
@@ -82,7 +124,10 @@ const Header = () => {
       : "px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors";
 
     return (
-      <Link href={constructSignInUrl(pathname)} className={buttonClasses}>
+      <Link
+        href={`/auth/sign-in?redirect_url=${encodeURIComponent(pathname)}`}
+        className={buttonClasses}
+      >
         Sign In
       </Link>
     );
@@ -124,9 +169,7 @@ const Header = () => {
     );
   };
 
-  if (!mounted) {
-    return null;
-  }
+  if (!mounted) return null;
 
   return (
     <>
@@ -171,10 +214,7 @@ const Header = () => {
                 )}
               </button>
 
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
-              <SignedOut>{renderSignInButton()}</SignedOut>
+              {user ? renderUserButton() : renderSignInButton()}
             </div>
           </div>
 
@@ -207,12 +247,7 @@ const Header = () => {
               </button>
 
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <SignedIn>
-                  <div className="flex justify-center">
-                    <UserButton afterSignOutUrl="/" />
-                  </div>
-                </SignedIn>
-                <SignedOut>{renderSignInButton(true)}</SignedOut>
+                {user ? renderUserButton(true) : renderSignInButton(true)}
               </div>
             </div>
           )}

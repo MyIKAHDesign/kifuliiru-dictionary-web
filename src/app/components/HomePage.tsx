@@ -2,7 +2,6 @@
 import HighlightsSection from "@/app/components/HighlightsSection";
 import NewWordsSection from "@/app/components/NewWordsSection";
 import DictionaryCTA from "@/app/components/DictionaryCTA";
-import Footer from "@/app/components/Footer";
 import HeroSection from "./WelcomeSection";
 import StatsSection from "./statsSection";
 
@@ -16,7 +15,6 @@ export default function HomePage() {
         <NewWordsSection />
         <DictionaryCTA />
       </main>
-      <Footer />
     </div>
   );
 }
