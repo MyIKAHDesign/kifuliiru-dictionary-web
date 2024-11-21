@@ -35,7 +35,7 @@ const Header = () => {
     { name: "Dictionary", icon: BookOpen, path: "/dictionary" },
     { name: "Numbers", icon: Hash, path: "/numbers" },
     { name: "Categories", icon: Grid, path: "/categories" },
-    { name: "Contribute", icon: PenSquare, path: "/contribute" },
+    { name: "Contribute", icon: PenSquare, path: "/quizz" },
     { name: "Kifuliiru", icon: Globe, path: "/kifuliiru" },
     { name: "Ibufuliiru", icon: Building, path: "/ibufuliiru" },
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
