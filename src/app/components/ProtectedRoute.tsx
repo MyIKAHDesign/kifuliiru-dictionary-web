@@ -1,58 +1,28 @@
 "use client";
-"use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/app/lib/supabase";
+import { useAuth } from "@clerk/nextjs";
 
 export default function ProtectedRoute({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    if (isLoaded && !isSignedIn) {
+      // Store the intended destination to redirect back after sign in
+      const currentPath = window.location.pathname;
+      router.push(`/sign-in?redirect_url=${currentPath}`);
+    }
+  }, [isLoaded, isSignedIn, router]);
 
-        if (!session) {
-          router.push(`/auth/sign-in?redirect_url=${window.location.pathname}`);
-          return;
-        }
-
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error("Auth error:", error);
-        router.push("/auth/sign-in");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/auth/sign-in");
-      }
-    });
-
-    checkAuth();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [router]);
-
-  if (isLoading) {
+  // Show loading spinner while Clerk loads
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -60,9 +30,11 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!isAuthenticated) {
+  // Don't render anything if not authenticated
+  if (!isSignedIn) {
     return null;
   }
 
+  // User is authenticated, render the protected content
   return <>{children}</>;
 }
