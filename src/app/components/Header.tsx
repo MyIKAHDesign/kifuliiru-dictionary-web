@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase } from "@/app/lib/supabase";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import {
   Sun,
   Moon,
@@ -18,8 +17,7 @@ import {
   Globe,
   Building,
   Users,
-  LogOut,
-  User as UserIcon,
+  LucideIcon,
 } from "lucide-react";
 import DevelopmentBanner from "./DevelopmentBanner";
 
@@ -28,14 +26,27 @@ const Header = () => {
   const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [certificationStatus] = useState<string | null>(null);
 
-  const navigationLinks = [
+  interface NavigationItem {
+    name: string;
+    icon: LucideIcon;
+    path: string;
+  }
+
+  const getNavigationLinks = () => [
     { name: "Home", icon: Home, path: "/" },
     { name: "Dictionary", icon: BookOpen, path: "/dictionary" },
     { name: "Numbers", icon: Hash, path: "/numbers" },
     { name: "Categories", icon: Grid, path: "/categories" },
-    { name: "Contribute", icon: PenSquare, path: "/quizz" },
+    {
+      name:
+        certificationStatus === "CertifiedStatus"
+          ? "Contribute"
+          : "Become a Contributor",
+      icon: PenSquare,
+      path: certificationStatus === "CertifiedStatus" ? "/contribute" : "/quiz",
+    },
     { name: "Kifuliiru", icon: Globe, path: "/kifuliiru" },
     { name: "Ibufuliiru", icon: Building, path: "/ibufuliiru" },
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
@@ -52,25 +63,6 @@ const Header = () => {
       : darkModePreference;
     setIsDark(initialDark);
     updateTheme(initialDark);
-
-    const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-    };
-
-    checkUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const updateTheme = (dark: boolean) => {
@@ -89,54 +81,44 @@ const Header = () => {
     updateTheme(newDark);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const handleMobileMenuClick = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const renderUserButton = (isMobile: boolean = false) => {
-    if (!user) return null;
-
+  const renderAuthButton = (isMobile: boolean = false) => {
     const buttonClasses = isMobile
-      ? "w-full flex items-center justify-center gap-2 p-2"
-      : "flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors";
+      ? "w-full flex items-center justify-center"
+      : "flex items-center";
 
     return (
-      <div className="relative group">
-        <button className={buttonClasses}>
-          <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-          <span className="text-gray-600 dark:text-gray-300">{user.email}</span>
-          <LogOut
-            className="h-5 w-5 text-gray-600 dark:text-gray-300 cursor-pointer"
-            onClick={handleSignOut}
+      <div className={buttonClasses}>
+        <SignedOut>
+          <SignInButton mode="modal">
+            <button
+              className={`${
+                isMobile ? "w-full" : ""
+              } px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors`}
+            >
+              Sign In
+            </button>
+          </SignInButton>
+        </SignedOut>
+        <SignedIn>
+          <UserButton
+            afterSignOutUrl="/"
+            appearance={{
+              elements: {
+                userButtonBox: "hover:opacity-80 transition-opacity",
+                userButtonTrigger: "focus:shadow-none",
+              },
+            }}
           />
-        </button>
+        </SignedIn>
       </div>
     );
   };
 
-  const renderSignInButton = (isMobile: boolean = false) => {
-    const buttonClasses = isMobile
-      ? "w-full px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors"
-      : "px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors";
-
-    return (
-      <Link
-        href={`/auth/sign-in?redirect_url=${encodeURIComponent(pathname)}`}
-        className={buttonClasses}
-      >
-        Sign In
-      </Link>
-    );
-  };
-
-  const renderNavLink = (
-    item: (typeof navigationLinks)[0],
-    mobile: boolean = false
-  ) => {
+  const renderNavLink = (item: NavigationItem, mobile: boolean = false) => {
     const isActive = pathname === item.path;
     const Icon = item.icon;
 
@@ -200,7 +182,7 @@ const Header = () => {
             </button>
 
             <div className="hidden md:flex items-center space-x-6">
-              {navigationLinks.map((item) => renderNavLink(item))}
+              {getNavigationLinks().map((item) => renderNavLink(item))}
 
               <button
                 onClick={toggleTheme}
@@ -214,13 +196,13 @@ const Header = () => {
                 )}
               </button>
 
-              {user ? renderUserButton() : renderSignInButton()}
+              {renderAuthButton()}
             </div>
           </div>
 
           {isMobileMenuOpen && (
             <div className="md:hidden mt-4 py-4 space-y-4">
-              {navigationLinks.map((item) => renderNavLink(item, true))}
+              {getNavigationLinks().map((item) => renderNavLink(item, true))}
 
               <button
                 onClick={toggleTheme}
@@ -247,7 +229,7 @@ const Header = () => {
               </button>
 
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                {user ? renderUserButton(true) : renderSignInButton(true)}
+                {renderAuthButton(true)}
               </div>
             </div>
           )}

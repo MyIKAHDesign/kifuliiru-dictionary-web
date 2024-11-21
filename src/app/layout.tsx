@@ -3,8 +3,8 @@ import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import { Metadata } from "next";
 import { generateMetadata } from "./lib/metadata";
 import Header from "./components/Header";
-import Footer from "./components/Footer"; // Add this import
-import AuthProvider from "@/app/lib/AuthProvider";
+import Footer from "./components/Footer";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -42,20 +42,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${playfair.variable} ${sourceSans.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
-        <AuthProvider>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${playfair.variable} ${sourceSans.variable}`}
+        suppressHydrationWarning
+      >
+        <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
           <div className="flex flex-col min-h-screen">
-            <Header />
+            <Header />{" "}
+            {/* Header component should now include SignInButton and UserButton */}
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
-        </AuthProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
