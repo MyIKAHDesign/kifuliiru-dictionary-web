@@ -1,3 +1,4 @@
+// app/dictionary/DictionaryContent.tsx
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Volume2, Globe2, ChevronDown } from "lucide-react";
@@ -17,6 +18,7 @@ import { DictionaryEntry, searchDictionaryWords } from "@/app/lib/supabase";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
+const WORDS_PER_PAGE = 50;
 
 type LanguageOption = "kifuliiru" | "english" | "french" | "swahili";
 
@@ -41,6 +43,7 @@ export default function DictionaryContent({
   const [displayLanguage, setDisplayLanguage] =
     useState<LanguageOption>("english");
   const [filter, setFilter] = useState<FilterType>("all");
+  const [visibleWords, setVisibleWords] = useState(WORDS_PER_PAGE);
 
   // Handle URL query parameter
   useEffect(() => {
@@ -55,6 +58,7 @@ export default function DictionaryContent({
   const handleSearch = async (term: string) => {
     if (!term.trim()) {
       setWords(initialWords);
+      setVisibleWords(WORDS_PER_PAGE); // Reset pagination when searching
       return;
     }
 
@@ -62,6 +66,7 @@ export default function DictionaryContent({
     try {
       const results = await searchDictionaryWords(term);
       setWords(results);
+      setVisibleWords(WORDS_PER_PAGE); // Reset pagination when searching
     } catch (error) {
       console.error("Error searching:", error);
       setWords([]);
@@ -78,6 +83,10 @@ export default function DictionaryContent({
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
+
+  const handleLoadMore = () => {
+    setVisibleWords((prev) => prev + WORDS_PER_PAGE);
+  };
 
   const getPlaceholderText = (lang: LanguageOption) => {
     const placeholders: Record<LanguageOption, string> = {
@@ -162,41 +171,51 @@ export default function DictionaryContent({
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {words.map((word) => (
-            <Card key={word.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>{word.igambo}</span>
-                  <button
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-                    aria-label="Listen to pronunciation"
-                  >
-                    <Volume2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                  </button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="font-medium">{word.kifuliiru}</p>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {
-                      word[
-                        displayLanguage === "english"
-                          ? "kingereza"
-                          : displayLanguage === "french"
-                          ? "kifaransa"
-                          : displayLanguage === "swahili"
-                          ? "kiswahili"
-                          : "kifuliiru"
-                      ]
-                    }
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          {/* Inside the grid of cards, replace the existing Card component with this: */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {words.slice(0, visibleWords).map((word) => (
+              <Card key={word.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span>{word.igambo}</span>
+                    <button
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                      aria-label="Listen to pronunciation"
+                    >
+                      <Volume2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {displayLanguage === "kifuliiru" && word.kifuliiru}
+                      {displayLanguage === "english" && word.kingereza}
+                      {displayLanguage === "french" && word.kifaransa}
+                      {displayLanguage === "swahili" && word.kiswahili}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {words.length > visibleWords && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={handleLoadMore}
+                className="px-8 py-3 bg-orange-600 hover:bg-orange-700 text-white 
+                         rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                Load More Words
+                <span className="text-sm opacity-75">
+                  ({visibleWords} of {words.length})
+                </span>
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {!isLoading && words.length === 0 && (
