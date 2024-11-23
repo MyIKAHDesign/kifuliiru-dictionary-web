@@ -1,24 +1,27 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function ProtectedRoute({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { userId, isLoaded } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoaded && !userId) {
-      router.push(`/auth/sign-in?redirect_url=${window.location.pathname}`);
+    if (isLoaded && !isSignedIn) {
+      // Store the intended destination to redirect back after sign in
+      const currentPath = window.location.pathname;
+      router.push(`/sign-in?redirect_url=${currentPath}`);
     }
-  }, [userId, isLoaded, router]);
+  }, [isLoaded, isSignedIn, router]);
 
+  // Show loading spinner while Clerk loads
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -27,9 +30,11 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!userId) {
+  // Don't render anything if not authenticated
+  if (!isSignedIn) {
     return null;
   }
 
+  // User is authenticated, render the protected content
   return <>{children}</>;
 }

@@ -1,11 +1,10 @@
-// src/app/layout.tsx
-
-import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import { Metadata } from "next";
 import { generateMetadata } from "./lib/metadata";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -49,12 +48,13 @@ export default function RootLayout({
         className={`${playfair.variable} ${sourceSans.variable}`}
         suppressHydrationWarning
       >
-        <head>
-          <link rel="icon" href="/favicon.ico" />
-        </head>
         <body className="min-h-screen bg-neutral-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased">
-          <Header />
-          <main className="flex flex-col min-h-screen">{children}</main>
+          <div className="flex flex-col min-h-screen">
+            <Header />{" "}
+            {/* Header component should now include SignInButton and UserButton */}
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
         </body>
       </html>
     </ClerkProvider>

@@ -12,7 +12,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Footer from "../components/Footer";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <motion.h2
@@ -252,7 +251,6 @@ export default function IbufuliiruPage() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

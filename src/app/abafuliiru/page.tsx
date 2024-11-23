@@ -28,7 +28,6 @@ import {
   Brush,
   BookOpen,
 } from "lucide-react";
-import Footer from "@/app/components/Footer";
 
 // Interfaces
 interface InfoCardProps {
@@ -528,8 +527,6 @@ const AbafuliiruPage: React.FC = () => {
           </button>
         </div>
       </motion.div>
-
-      <Footer />
     </div>
   );
 };

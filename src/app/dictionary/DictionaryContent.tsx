@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Footer from "@/app/components/Footer";
 import { FaSearch } from "react-icons/fa";
 import WordCard from "@/app/components/WordCard";
 import { DictionaryModal } from "@/app/components/DictionaryModal";
@@ -283,8 +282,6 @@ export default function DictionaryContent() {
           />
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

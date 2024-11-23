@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import Footer from "../components/Footer";
 
 const CategoriesContent = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -168,8 +167,6 @@ const CategoriesContent = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };
