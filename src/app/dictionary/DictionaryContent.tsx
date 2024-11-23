@@ -41,7 +41,7 @@ export default function DictionaryContent({
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [displayLanguage, setDisplayLanguage] =
-    useState<LanguageOption>("english");
+    useState<LanguageOption>("kifuliiru");
   const [filter, setFilter] = useState<FilterType>("all");
   const [visibleWords, setVisibleWords] = useState(WORDS_PER_PAGE);
 
@@ -90,7 +90,7 @@ export default function DictionaryContent({
 
   const getPlaceholderText = (lang: LanguageOption) => {
     const placeholders: Record<LanguageOption, string> = {
-      kifuliiru: "Londa amagambo mu Kifuliiru...",
+      kifuliiru: "Looza amagambo mu Kifuliiru...",
       swahili: "Tafuta maneno kwa Kifuliiru...",
       french: "Rechercher des mots en Kifuliiru...",
       english: "Search for words in Kifuliiru...",
