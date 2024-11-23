@@ -22,6 +22,8 @@ const publicRoutes: string[] = [
   "/ibufuliiru(.*)",
   "/abafuliiru(.*)",
   "/api/public(.*)",
+  "/auth/callback(.*)", // Add auth callback to public routes
+  "/dictionary(.*)", // Make dictionary accessible without auth
 ];
 
 // Admin routes that require admin or super_admin roles
@@ -63,10 +65,13 @@ const hasRequiredRole = (
 
 export async function middleware(request: NextRequest) {
   try {
+    // Create a response to modify
+    const response = NextResponse.next();
+
     // Create a Supabase client configured to use cookies
     const supabase = createMiddlewareClient<Database>({
       req: request,
-      res: NextResponse.next(),
+      res: response,
     });
 
     // Get the current path
@@ -77,9 +82,22 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({}, { status: 200 });
     }
 
+    // Handle auth callback route
+    if (url.includes("/auth/callback")) {
+      const requestUrl = new URL(request.url);
+      const code = requestUrl.searchParams.get("code");
+
+      if (code) {
+        // Exchange the code for a session
+        await supabase.auth.exchangeCodeForSession(code);
+        // Redirect to dictionary page after successful sign in
+        return NextResponse.redirect(new URL("/dictionary", requestUrl.origin));
+      }
+    }
+
     // Allow public routes
     if (matchesPattern(url, publicRoutes)) {
-      return NextResponse.next();
+      return response;
     }
 
     // Refresh session if it exists
@@ -135,23 +153,24 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL("/quiz", request.url));
         }
       }
-    }
 
-    // Clone the request headers
-    const requestHeaders = new Headers(request.headers);
-
-    // Add user information to request headers if available
-    if (session) {
+      // Add user information to request headers
+      const requestHeaders = new Headers(request.headers);
       requestHeaders.set("x-user-id", session.user.id);
       requestHeaders.set("x-user-email", session.user.email || "");
-    }
 
-    // Create a new response with the modified headers
-    const response = NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
+      // Add authenticated user's role to headers if available
+      if (userRole) {
+        requestHeaders.set("x-user-role", userRole);
+      }
+
+      // Create a new response with the modified headers
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
 
     return response;
   } catch (e) {
