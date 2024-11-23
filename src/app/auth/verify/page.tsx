@@ -1,117 +1,90 @@
-// app/auth/verify/page.tsx
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-export default function VerifyPage() {
-  const [verificationStatus, setVerificationStatus] = useState<
-    "loading" | "success" | "error"
-  >("loading");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const router = useRouter();
+// Define the verification types that Supabase supports
+type VerificationType =
+  | "signup"
+  | "recovery"
+  | "invite"
+  | "email"
+  | "magiclink";
+
+function VerifyComponent() {
   const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as VerificationType | null;
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    const handleVerification = async () => {
+    const handleEmailVerification = async () => {
       try {
-        // Get the token from URL
-        const token = searchParams.get("token");
-        const type = searchParams.get("type");
+        if (token_hash && type) {
+          if (!isValidVerificationType(type)) {
+            throw new Error("Invalid verification type");
+          }
 
-        if (!token || !type) {
-          setVerificationStatus("error");
-          setErrorMessage("Invalid verification link");
-          return;
-        }
-
-        if (type === "signup") {
           const { error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: "signup",
+            token_hash,
+            type,
           });
-
           if (error) throw error;
-
-          setVerificationStatus("success");
-          // Redirect after a short delay
-          setTimeout(() => {
-            router.push("/auth/signin");
-          }, 2000);
-        } else if (type === "recovery") {
-          // Handle password reset verification
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: "recovery",
-          });
-
-          if (error) throw error;
-          setVerificationStatus("success");
-          router.push("/auth/reset-password");
+          // Redirect after verification
+          window.location.href = next || "/";
         }
-      } catch (error) {
-        console.error("Verification error:", error);
-        setVerificationStatus("error");
-        setErrorMessage(
-          error instanceof Error ? error.message : "Verification failed"
-        );
+      } catch (error: unknown) {
+        console.error("Error verifying email:", error);
+        // Handle error (e.g., show error message)
       }
     };
 
-    handleVerification();
-  }, [router, searchParams, supabase.auth]);
+    handleEmailVerification();
+  }, [token_hash, type, next, supabase.auth]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="text-center">
-          {verificationStatus === "loading" && (
-            <div className="space-y-4">
-              <Loader2 className="animate-spin h-12 w-12 mx-auto text-indigo-600" />
-              <h2 className="text-2xl font-semibold">
-                Verifying your email...
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Please wait while we confirm your email address
-              </p>
-            </div>
-          )}
-
-          {verificationStatus === "success" && (
-            <div className="space-y-4">
-              <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
-              <h2 className="text-2xl font-semibold text-green-600">
-                Email Verified Successfully!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Redirecting you to sign in...
-              </p>
-            </div>
-          )}
-
-          {verificationStatus === "error" && (
-            <div className="space-y-4">
-              <XCircle className="h-12 w-12 mx-auto text-red-600" />
-              <h2 className="text-2xl font-semibold text-red-600">
-                Verification Failed
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">{errorMessage}</p>
-              <button
-                onClick={() => router.push("/auth/signin")}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent 
-                         rounded-md shadow-sm text-sm font-medium text-white 
-                         bg-indigo-600 hover:bg-indigo-700 focus:outline-none 
-                         focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Return to Sign In
-              </button>
-            </div>
-          )}
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Verifying your email
+          </h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Please wait while we verify your email address...
+          </p>
+          <div className="mt-4 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// Type guard to ensure we have a valid verification type
+function isValidVerificationType(type: string): type is VerificationType {
+  const validTypes: VerificationType[] = [
+    "signup",
+    "recovery",
+    "invite",
+    "email",
+    "magiclink",
+  ];
+  return validTypes.includes(type as VerificationType);
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+        </div>
+      }
+    >
+      <VerifyComponent />
+    </Suspense>
   );
 }
