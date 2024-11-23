@@ -1,128 +1,86 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { FaSearch } from "react-icons/fa";
-import WordCard from "@/app/components/WordCard";
-import { DictionaryModal } from "@/app/components/DictionaryModal";
-import { Language } from "@/app/data/types/dictionary";
-import { LanguageSelector } from "@/app/components/LanguageSelector";
+import { Search, Volume2, Globe2, ChevronDown } from "lucide-react";
 import {
-  DictionaryEntry,
-  fetchDictionaryWords,
-  searchDictionaryWords,
-} from "@/app/lib/supabase";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/app/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/app/components/ui/dropdown-menu";
+import { DictionaryEntry, searchDictionaryWords } from "@/app/lib/supabase";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
 
-const WORDS_PER_PAGE = 21;
+type LanguageOption = "kifuliiru" | "english" | "french" | "swahili";
 
-type AudioPlayingState = {
-  wordId: string;
-  type: "term" | "definition";
-} | null;
+const languageLabels: Record<LanguageOption, string> = {
+  kifuliiru: "Kifuliiru",
+  english: "English",
+  french: "Français",
+  swahili: "Kiswahili",
+};
 
-export default function DictionaryContent() {
+interface DictionaryContentProps {
+  initialWords: DictionaryEntry[];
+}
+
+export default function DictionaryContent({
+  initialWords,
+}: DictionaryContentProps) {
   const searchParams = useSearchParams();
-  const [words, setWords] = useState<DictionaryEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [words, setWords] = useState<DictionaryEntry[]>(initialWords);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleWords, setVisibleWords] = useState(WORDS_PER_PAGE);
-  const [selectedWord, setSelectedWord] = useState<DictionaryEntry | null>(
-    null
-  );
-  const [playingAudio, setPlayingAudio] = useState<AudioPlayingState>(null);
+  const [displayLanguage, setDisplayLanguage] =
+    useState<LanguageOption>("english");
   const [filter, setFilter] = useState<FilterType>("all");
-  const [language, setLanguage] = useState<Language>("english");
 
   // Handle URL query parameter
-  // Combine search params and initial load effects
   useEffect(() => {
     const query = searchParams.get("q");
-    const loadInitialData = async () => {
-      setIsLoading(true);
-      try {
-        if (query) {
-          const results = await searchDictionaryWords(query);
-          setSearchTerm(query);
-          setWords(results);
-        } else {
-          const data = await fetchDictionaryWords();
-          setWords(data);
-        }
-      } catch (error) {
-        console.error("Error loading dictionary words:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadInitialData();
+    if (query) {
+      setSearchTerm(query);
+      handleSearch(query);
+    }
   }, [searchParams]);
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const data = await fetchDictionaryWords();
-        setWords(data);
-      } catch (error) {
-        console.error("Error loading dictionary words:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!searchTerm.trim()) {
-        const allWords = await fetchDictionaryWords();
-        setWords(allWords);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const results = await searchDictionaryWords(searchTerm);
-        setWords(results);
-      } catch (error) {
-        console.error("Error searching words:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const debounceTimeout = setTimeout(performSearch, 300);
-    return () => clearTimeout(debounceTimeout);
-  }, [searchTerm]);
-
-  const filteredWords = words;
-
-  const handlePlayAudio = async (
-    url: string,
-    wordId: string,
-    type: "term" | "definition"
-  ) => {
-    if (playingAudio?.wordId === wordId && playingAudio?.type === type) {
-      setPlayingAudio(null);
+  // Search function
+  const handleSearch = async (term: string) => {
+    if (!term.trim()) {
+      setWords(initialWords);
       return;
     }
 
-    alert("Audio playback coming soon!");
-    setPlayingAudio({ wordId, type });
-
-    setTimeout(() => {
-      setPlayingAudio(null);
-    }, 1000);
+    setIsLoading(true);
+    try {
+      const results = await searchDictionaryWords(term);
+      setWords(results);
+    } catch (error) {
+      console.error("Error searching:", error);
+      setWords([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleLoadMore = () => {
-    setVisibleWords((prev) => prev + WORDS_PER_PAGE);
-  };
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(searchTerm);
+    }, 300);
 
-  const getPlaceholderText = (lang: Language) => {
-    const placeholders: Record<Language, string> = {
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const getPlaceholderText = (lang: LanguageOption) => {
+    const placeholders: Record<LanguageOption, string> = {
       kifuliiru: "Londa amagambo mu Kifuliiru...",
       swahili: "Tafuta maneno kwa Kifuliiru...",
       french: "Rechercher des mots en Kifuliiru...",
@@ -132,156 +90,120 @@ export default function DictionaryContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
-        <section className="mb-8 flex flex-col items-center">
-          <div className="text-center max-w-2xl mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-              Kifuliiru Dictionary
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300">
-              {language === "kifuliiru"
-                ? "Menya amagambo geꞌKifuliiru mu njira nyororo"
-                : language === "swahili"
-                ? "Gundua utajiri wa lugha ya Kifuliiru"
-                : language === "french"
-                ? "Découvrez la richesse de la langue Kifuliiru"
-                : "Discover the richness of Kifuliiru language"}
-            </p>
-          </div>
-          <div className="w-full max-w-xs">
-            <LanguageSelector
-              value={language}
-              onChange={(newLang) => setLanguage(newLang)}
-            />
-          </div>
-        </section>
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Kifuliiru Dictionary
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">
+          Explore and learn Kifuliiru words and their meanings
+        </p>
+      </div>
 
-        <section className="max-w-3xl mx-auto mb-8 w-full">
-          <div className="relative group">
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+      <div className="max-w-3xl mx-auto mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder={getPlaceholderText(language)}
+              placeholder={getPlaceholderText(displayLanguage)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 
-                       bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 
-                       focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                       text-lg transition-all duration-300 shadow-sm hover:shadow-md"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 
+                       dark:border-gray-700 dark:bg-gray-800 focus:ring-2 
+                       focus:ring-orange-500 focus:border-transparent"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-4 justify-center">
-            {FILTERS.map((type) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
-                          ${
-                            filter === type
-                              ? "bg-indigo-600 text-white"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                          }`}
+                className="flex items-center gap-2 px-4 py-3 border rounded-lg 
+                               bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
               >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                <Globe2 className="h-5 w-5" />
+                <span>{languageLabels[displayLanguage]}</span>
+                <ChevronDown className="h-4 w-4" />
               </button>
-            ))}
-          </div>
-        </section>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {Object.entries(languageLabels).map(([key, label]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => setDisplayLanguage(key as LanguageOption)}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        <section className="flex-1 min-h-[500px]">
-          {isLoading ? (
-            <div className="flex justify-center items-center min-h-[400px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-            </div>
-          ) : filteredWords.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {filteredWords.slice(0, visibleWords).map((word, index) => (
-                  <WordCard
-                    key={word.id}
-                    word={{
-                      term: word.igambo,
-                      definition: {
-                        kifuliiru: word.kifuliiru,
-                        english: word.kingereza,
-                        french: word.kifaransa,
-                        swahili: word.kiswahili,
-                      },
-                      date: word.created_at,
-                    }}
-                    language={language}
-                    index={index}
-                    isPlayingTerm={
-                      playingAudio?.wordId === word.id &&
-                      playingAudio?.type === "term"
-                    }
-                    isPlayingDefinition={
-                      playingAudio?.wordId === word.id &&
-                      playingAudio?.type === "definition"
-                    }
-                    onPlayTermAudio={() => handlePlayAudio("", word.id, "term")}
-                    onPlayDefinitionAudio={() =>
-                      handlePlayAudio("", word.id, "definition")
-                    }
-                    onShowDetails={() => setSelectedWord(word)}
-                  />
-                ))}
-              </div>
+        <div className="flex flex-wrap gap-2 mt-4 justify-center">
+          {FILTERS.map((type) => (
+            <button
+              key={type}
+              onClick={() => setFilter(type)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
+                        ${
+                          filter === type
+                            ? "bg-orange-600 text-white"
+                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        }`}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {visibleWords < filteredWords.length && (
-                <div className="flex justify-center mt-8">
+      {isLoading ? (
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {words.map((word) => (
+            <Card key={word.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span>{word.igambo}</span>
                   <button
-                    onClick={handleLoadMore}
-                    className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white 
-                             rounded-full hover:from-indigo-700 hover:to-purple-700 
-                             focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                             transform transition-all duration-300 hover:scale-105"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                    aria-label="Listen to pronunciation"
                   >
-                    Load More Words
+                    <Volume2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                   </button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="font-medium">{word.kifuliiru}</p>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {
+                      word[
+                        displayLanguage === "english"
+                          ? "kingereza"
+                          : displayLanguage === "french"
+                          ? "kifaransa"
+                          : displayLanguage === "swahili"
+                          ? "kiswahili"
+                          : "kifuliiru"
+                      ]
+                    }
+                  </p>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
-              <FaSearch className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-xl font-medium">No words found</p>
-              <p className="mt-2">Try adjusting your search or filters</p>
-            </div>
-          )}
-        </section>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {selectedWord && (
-          <DictionaryModal
-            word={{
-              term: selectedWord.igambo,
-              definition: {
-                kifuliiru: selectedWord.kifuliiru,
-                english: selectedWord.kingereza,
-                french: selectedWord.kifaransa,
-                swahili: selectedWord.kiswahili,
-              },
-              date: selectedWord.created_at,
-            }}
-            language={language}
-            onClose={() => setSelectedWord(null)}
-            onPlayTermAudio={() => handlePlayAudio("", selectedWord.id, "term")}
-            onPlayDefinitionAudio={() =>
-              handlePlayAudio("", selectedWord.id, "definition")
-            }
-            isPlayingTerm={
-              playingAudio?.wordId === selectedWord.id &&
-              playingAudio?.type === "term"
-            }
-            isPlayingDefinition={
-              playingAudio?.wordId === selectedWord.id &&
-              playingAudio?.type === "definition"
-            }
-          />
-        )}
-      </main>
+      {!isLoading && words.length === 0 && (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <p>No words found. Try adjusting your search criteria.</p>
+        </div>
+      )}
     </div>
   );
 }
