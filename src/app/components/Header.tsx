@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, UserButton, useAuth, useUser } from "@clerk/nextjs";
 import {
   Sun,
   Moon,
@@ -13,40 +14,58 @@ import {
   BookOpen,
   Hash,
   Grid,
-  PenSquare,
   Globe,
   Building,
   Users,
   LucideIcon,
+  PenLine,
 } from "lucide-react";
 import DevelopmentBanner from "./DevelopmentBanner";
 
+interface UserMetadata {
+  quizCompleted?: boolean;
+  role?: string;
+}
+
+interface NavigationItem {
+  name: string;
+  icon: LucideIcon;
+  path: string;
+}
+
 const Header = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [certificationStatus] = useState<string | null>(null);
+  const [isButtonHovered, setIsButtonHovered] = useState(false);
 
-  interface NavigationItem {
-    name: string;
-    icon: LucideIcon;
-    path: string;
-  }
+  const handleContributorClick = async () => {
+    if (!isLoaded) return;
 
-  const getNavigationLinks = () => [
+    if (!isSignedIn) {
+      localStorage.setItem("postLoginRedirect", "/contribute");
+      router.push("/sign-in");
+      return;
+    }
+
+    const metadata = user?.publicMetadata as UserMetadata;
+
+    if (metadata?.quizCompleted) {
+      router.push("/contribute");
+    } else {
+      router.push("/quiz");
+    }
+  };
+
+  const getNavigationLinks = (): NavigationItem[] => [
     { name: "Home", icon: Home, path: "/" },
     { name: "Dictionary", icon: BookOpen, path: "/dictionary" },
     { name: "Numbers", icon: Hash, path: "/numbers" },
     { name: "Categories", icon: Grid, path: "/categories" },
-    {
-      name:
-        certificationStatus === "CertifiedStatus"
-          ? "Contribute"
-          : "Become a Contributor",
-      icon: PenSquare,
-      path: certificationStatus === "CertifiedStatus" ? "/contribute" : "/quiz",
-    },
     { name: "Kifuliiru", icon: Globe, path: "/kifuliiru" },
     { name: "Ibufuliiru", icon: Building, path: "/ibufuliiru" },
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
@@ -64,6 +83,22 @@ const Header = () => {
     setIsDark(initialDark);
     updateTheme(initialDark);
   }, []);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      const redirectPath = localStorage.getItem("postLoginRedirect");
+      if (redirectPath) {
+        localStorage.removeItem("postLoginRedirect");
+        const metadata = user.publicMetadata as UserMetadata;
+
+        if (redirectPath === "/contribute" && !metadata?.quizCompleted) {
+          router.push("/quiz");
+        } else {
+          router.push(redirectPath);
+        }
+      }
+    }
+  }, [isLoaded, isSignedIn, router, user]);
 
   const updateTheme = (dark: boolean) => {
     if (dark) {
@@ -83,39 +118,6 @@ const Header = () => {
 
   const handleMobileMenuClick = () => {
     setIsMobileMenuOpen(false);
-  };
-
-  const renderAuthButton = (isMobile: boolean = false) => {
-    const buttonClasses = isMobile
-      ? "w-full flex items-center justify-center"
-      : "flex items-center";
-
-    return (
-      <div className={buttonClasses}>
-        <SignedOut>
-          <SignInButton mode="modal">
-            <button
-              className={`${
-                isMobile ? "w-full" : ""
-              } px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors`}
-            >
-              Sign In
-            </button>
-          </SignInButton>
-        </SignedOut>
-        <SignedIn>
-          <UserButton
-            afterSignOutUrl="/"
-            appearance={{
-              elements: {
-                userButtonBox: "hover:opacity-80 transition-opacity",
-                userButtonTrigger: "focus:shadow-none",
-              },
-            }}
-          />
-        </SignedIn>
-      </div>
-    );
   };
 
   const renderNavLink = (item: NavigationItem, mobile: boolean = false) => {
@@ -184,6 +186,30 @@ const Header = () => {
             <div className="hidden md:flex items-center space-x-6">
               {getNavigationLinks().map((item) => renderNavLink(item))}
 
+              {/* Professional CTA Button with animation */}
+              <button
+                onClick={handleContributorClick}
+                onMouseEnter={() => setIsButtonHovered(true)}
+                onMouseLeave={() => setIsButtonHovered(false)}
+                className="group relative px-6 py-2.5 rounded-lg overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+              >
+                {/* Animated background effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 transition-transform duration-300 transform origin-left group-hover:scale-x-100 scale-x-0" />
+
+                {/* Button ripple effect */}
+                <div className="absolute inset-0 bg-white/20 transform origin-center transition-transform duration-500 scale-0 group-hover:scale-100 rounded-lg" />
+
+                {/* Button content */}
+                <div className="relative flex items-center justify-center gap-2 transform transition-transform duration-300 group-hover:scale-105">
+                  <PenLine
+                    className={`w-4 h-4 transition-all duration-300 transform ${
+                      isButtonHovered ? "rotate-12" : ""
+                    }`}
+                  />
+                  <span className="font-medium">Contribute</span>
+                </div>
+              </button>
+
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out group"
@@ -196,13 +222,34 @@ const Header = () => {
                 )}
               </button>
 
-              {renderAuthButton()}
+              <SignedIn>
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      userButtonBox: "hover:opacity-80 transition-opacity",
+                      userButtonTrigger: "focus:shadow-none",
+                    },
+                  }}
+                />
+              </SignedIn>
             </div>
           </div>
 
           {isMobileMenuOpen && (
             <div className="md:hidden mt-4 py-4 space-y-4">
               {getNavigationLinks().map((item) => renderNavLink(item, true))}
+
+              {/* Mobile CTA Button */}
+              <button
+                onClick={handleContributorClick}
+                className="w-full px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <PenLine className="w-4 h-4" />
+                  <span className="font-medium">Contribute</span>
+                </div>
+              </button>
 
               <button
                 onClick={toggleTheme}
@@ -228,9 +275,19 @@ const Header = () => {
                 </span>
               </button>
 
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                {renderAuthButton(true)}
-              </div>
+              <SignedIn>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-center">
+                  <UserButton
+                    afterSignOutUrl="/"
+                    appearance={{
+                      elements: {
+                        userButtonBox: "hover:opacity-80 transition-opacity",
+                        userButtonTrigger: "focus:shadow-none",
+                      },
+                    }}
+                  />
+                </div>
+              </SignedIn>
             </div>
           )}
         </div>
