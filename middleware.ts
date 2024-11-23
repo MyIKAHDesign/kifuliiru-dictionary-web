@@ -1,71 +1,175 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { Database } from "@/app/lib/types/supabase";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Define roles and protected routes (fix typo in SUPER_ADMIN)
-const ROLES = {
-  SUPER_ADMIN: "super_admin",
-  ADMIN: "admin",
-  EDITOR: "editor",
-  VIEWER: "viewer",
-} as const;
+// Define roles using an enum for better type safety
+enum Role {
+  SUPER_ADMIN = "super_admin",
+  ADMIN = "admin",
+  EDITOR = "editor",
+  VIEWER = "viewer",
+}
 
 // Public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
+const publicRoutes: string[] = [
   "/",
+  "/login(.*)",
+  "/register(.*)",
   "/home(.*)",
   "/about(.*)",
   "/kifuliiru(.*)",
   "/ibufuliiru(.*)",
   "/abafuliiru(.*)",
-  "/api/webhook/clerk(.*)",
-  "/api/webhook/stripe(.*)",
-  "/api/uploadthing(.*)",
-]);
+  "/api/public(.*)",
+];
 
-// Admin routes that require specific roles (fix space before (.*))
-const isAdminRoute = createRouteMatcher([
-  "/admin(.*)",
-  "/dashboard(.*)",
-  "/settings(.*)",
-]);
+// Admin routes that require admin or super_admin roles
+const adminRoutes: string[] = ["/admin(.*)", "/dashboard(.*)", "/settings(.*)"];
 
 // Routes that require editor role or higher
-const isEditorRoute = createRouteMatcher(["/edit(.*)", "/contribute(.*)"]);
+const editorRoutes: string[] = ["/edit(.*)", "/contribute(.*)"];
 
-export default clerkMiddleware(async (auth, req) => {
-  // Allow public routes
-  if (isPublicRoute(req)) {
-    return NextResponse.next();
-  }
+// Helper function to check if URL matches any pattern
+const matchesPattern = (url: string, patterns: string[]): boolean => {
+  return patterns.some((pattern) => {
+    const regexPattern = pattern.replace(/\*/g, ".*");
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.test(url);
+  });
+};
 
-  // Protect all non-public routes
-  auth.protect(); // Remove unnecessary await
+// Helper function to check if a role has sufficient permissions
+const hasRequiredRole = (
+  userRole: Role | undefined,
+  requiredRoles: Role[]
+): boolean => {
+  if (!userRole) return false;
 
-  // Get user role from metadata (handle potential undefined type)
-  const role: keyof typeof ROLES | undefined =
-    auth.sessionClaims?.metadata?.role;
+  const roleHierarchy = {
+    [Role.SUPER_ADMIN]: 4,
+    [Role.ADMIN]: 3,
+    [Role.EDITOR]: 2,
+    [Role.VIEWER]: 1,
+  };
 
-  // Handle admin routes
-  if (isAdminRoute(req)) {
-    if (!role || !["super_admin", "admin"].includes(role)) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
+  const userRoleLevel = roleHierarchy[userRole];
+  const requiredRoleLevel = Math.min(
+    ...requiredRoles.map((role) => roleHierarchy[role])
+  );
+
+  return userRoleLevel >= requiredRoleLevel;
+};
+
+export async function middleware(request: NextRequest) {
+  try {
+    // Create a Supabase client configured to use cookies
+    const supabase = createMiddlewareClient<Database>({
+      req: request,
+      res: NextResponse.next(),
+    });
+
+    // Get the current path
+    const url = request.nextUrl.pathname;
+
+    // Handle CORS preflight requests
+    if (request.method === "OPTIONS") {
+      return NextResponse.json({}, { status: 200 });
     }
-  }
 
-  // Handle editor routes
-  if (isEditorRoute(req)) {
-    if (!role || !["super_admin", "admin", "editor"].includes(role)) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Allow public routes
+    if (matchesPattern(url, publicRoutes)) {
+      return NextResponse.next();
     }
-  }
 
-  // All other authenticated routes
-  return NextResponse.next();
-});
+    // Refresh session if it exists
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    // Handle no session for protected routes
+    if ((!session || error) && !matchesPattern(url, publicRoutes)) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect_url", url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (session?.user) {
+      // Get user's role and quiz completion status from Supabase profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, quiz_completed")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        return NextResponse.redirect(new URL("/error", request.url));
+      }
+
+      const userRole = profile?.role as Role | undefined;
+      const quizCompleted = profile?.quiz_completed as boolean;
+
+      // Handle admin routes
+      if (matchesPattern(url, adminRoutes)) {
+        if (!hasRequiredRole(userRole, [Role.ADMIN, Role.SUPER_ADMIN])) {
+          return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+      }
+
+      // Handle editor routes
+      if (matchesPattern(url, editorRoutes)) {
+        if (
+          !hasRequiredRole(userRole, [
+            Role.EDITOR,
+            Role.ADMIN,
+            Role.SUPER_ADMIN,
+          ])
+        ) {
+          return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+
+        // Additional check for contribute route: verify quiz completion
+        if (url.startsWith("/contribute") && !quizCompleted) {
+          return NextResponse.redirect(new URL("/quiz", request.url));
+        }
+      }
+    }
+
+    // Clone the request headers
+    const requestHeaders = new Headers(request.headers);
+
+    // Add user information to request headers if available
+    if (session) {
+      requestHeaders.set("x-user-id", session.user.id);
+      requestHeaders.set("x-user-email", session.user.email || "");
+    }
+
+    // Create a new response with the modified headers
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+
+    return response;
+  } catch (e) {
+    // Handle any errors that occur during middleware execution
+    console.error("Middleware error:", e);
+    return NextResponse.redirect(new URL("/error", request.url));
+  }
+}
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|public/|assets/).*)",
   ],
 };

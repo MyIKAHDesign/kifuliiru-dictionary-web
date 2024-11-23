@@ -12,24 +12,30 @@ import {
 } from "lucide-react";
 import DictionaryManagement from "./dictionary_management";
 
-// Create a Numbers Management placeholder component
-const NumbersManagement = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-semibold mb-4">Number System Management</h2>
-    <p>Numbers management interface coming soon...</p>
-  </div>
-);
+interface Activity {
+  type: "new_entry" | "update" | "validation";
+  user: string;
+  word: string;
+  time: string;
+}
 
-// Create a Users Management placeholder component
-const UsersManagement = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-semibold mb-4">User Management</h2>
-    <p>User management interface coming soon...</p>
-  </div>
-);
+interface Stat {
+  label: string;
+  value: string;
+}
 
-// Create a Dashboard Overview component
-const DashboardOverview = ({ stats, recentActivity, pendingEntries }) => (
+interface DashboardOverviewProps {
+  stats: Stat[];
+  recentActivity: Activity[];
+  pendingEntries: number;
+}
+
+// Dashboard Overview Component with proper typing
+const DashboardOverview: React.FC<DashboardOverviewProps> = ({
+  stats,
+  recentActivity,
+  pendingEntries,
+}) => (
   <div className="p-6">
     {/* Stats Grid */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -61,7 +67,7 @@ const DashboardOverview = ({ stats, recentActivity, pendingEntries }) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-4 bg-gray-50 
-                                        dark:bg-gray-700/50 rounded-lg"
+                dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-1">
@@ -76,13 +82,13 @@ const DashboardOverview = ({ stats, recentActivity, pendingEntries }) => (
                 <div className="flex space-x-2">
                   <button
                     className="p-2 text-green-600 hover:bg-green-50 
-                                   dark:hover:bg-green-900/50 rounded-full"
+                    dark:hover:bg-green-900/50 rounded-full"
                   >
                     <Check className="h-5 w-5" />
                   </button>
                   <button
                     className="p-2 text-red-600 hover:bg-red-50 
-                                   dark:hover:bg-red-900/50 rounded-full"
+                    dark:hover:bg-red-900/50 rounded-full"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -104,7 +110,7 @@ const DashboardOverview = ({ stats, recentActivity, pendingEntries }) => (
               <div
                 key={index}
                 className="flex items-center space-x-4 p-4 bg-gray-50 
-                                        dark:bg-gray-700/50 rounded-lg"
+                dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex-1">
                   <p className="text-sm text-gray-900 dark:text-white">
@@ -128,7 +134,23 @@ const DashboardOverview = ({ stats, recentActivity, pendingEntries }) => (
   </div>
 );
 
-export default function AdminDashboard() {
+// Create a Numbers Management component
+const NumbersManagement: React.FC = () => (
+  <div className="p-6">
+    <h2 className="text-2xl font-semibold mb-4">Number System Management</h2>
+    <p>Numbers management interface coming soon...</p>
+  </div>
+);
+
+// Create a Users Management component
+const UsersManagement: React.FC = () => (
+  <div className="p-6">
+    <h2 className="text-2xl font-semibold mb-4">User Management</h2>
+    <p>User management interface coming soon...</p>
+  </div>
+);
+
+const AdminDashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [pendingEntries] = useState(5);
 
@@ -139,21 +161,26 @@ export default function AdminDashboard() {
     { id: "users", label: "User Management", icon: Users },
   ];
 
-  const stats = [
+  const stats: Stat[] = [
     { label: "Total Entries", value: "2,451" },
     { label: "Active Contributors", value: "127" },
-    { label: "Pending Reviews", value: pendingEntries },
+    { label: "Pending Reviews", value: String(pendingEntries) },
     { label: "This Week's Additions", value: "43" },
   ];
 
-  const recentActivity = [
+  const recentActivity: Activity[] = [
     {
       type: "new_entry",
       user: "Kabemba A.",
       word: "akasiisa",
       time: "2 hours ago",
     },
-    { type: "update", user: "Marie K.", word: "umuganho", time: "4 hours ago" },
+    {
+      type: "update",
+      user: "Marie K.",
+      word: "umuganho",
+      time: "4 hours ago",
+    },
     {
       type: "validation",
       user: "John D.",
@@ -243,4 +270,6 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+};
+
+export default AdminDashboard;
