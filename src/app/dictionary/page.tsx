@@ -1,29 +1,36 @@
-import { Metadata } from "next";
-import { generateMetadata } from "../lib/metadata";
-import DictionaryContent from "./DictionaryContent";
+import React, { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
-export const metadata: Metadata = generateMetadata({
-  title: "Browse Dictionary",
-  description:
-    "Browse and search through our comprehensive collection of Kifuliiru words and phrases",
-  keywords: [
-    "dictionary search",
-    "word lookup",
-    "translations",
-    "Kifuliiru language",
-  ],
-  openGraph: {
-    images: [
-      {
-        url: "/images/dictionary-og.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Kifuliiru Dictionary Search",
-      },
-    ],
-  },
-});
+// Separate component for search functionality
+function DictionaryContent() {
+  // ... rest of your dictionary logic
 
-export default function Page() {
-  return <DictionaryContent />;
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Your dictionary content */}
+    </div>
+  );
+}
+
+// Loading component
+function DictionaryLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+        <p className="text-gray-600 dark:text-gray-300">
+          Loading dictionary...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Main dictionary page component
+export default function DictionaryPage() {
+  return (
+    <Suspense fallback={<DictionaryLoading />}>
+      <DictionaryContent />
+    </Suspense>
+  );
 }
