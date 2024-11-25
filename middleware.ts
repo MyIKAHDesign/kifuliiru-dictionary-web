@@ -14,23 +14,22 @@ enum Role {
 // Public routes that don't require authentication
 const publicRoutes: string[] = [
   "/",
-  "/login(.*)",
-  "/register(.*)",
-  "/home(.*)",
-  "/about(.*)",
-  "/kifuliiru(.*)",
-  "/ibufuliiru(.*)",
-  "/abafuliiru(.*)",
-  "/api/public(.*)",
-  "/auth/callback(.*)", // Add auth callback to public routes
-  "/dictionary(.*)", // Make dictionary accessible without auth
+  "/auth/(.*)", // All auth routes
+  "/dictionary", // Public dictionary access
+  "/numbers", // Public numbers access
+  "/about",
+  "/kifuliiru",
+  "/ibufuliiru",
+  "/abafuliiru",
+  "/api/public/(.*)",
 ];
 
-// Admin routes that require admin or super_admin roles
-const adminRoutes: string[] = ["/admin(.*)", "/dashboard(.*)", "/settings(.*)"];
-
-// Routes that require editor role or higher
-const editorRoutes: string[] = ["/edit(.*)", "/contribute(.*)"];
+// Protected routes configuration
+const protectedRoutes = {
+  admin: ["/admin/(.*)", "/dashboard/(.*)", "/settings/(.*)", "/users/(.*)"],
+  editor: ["/contribute/(.*)", "/edit/(.*)", "/submissions/(.*)"],
+  viewer: ["/profile/(.*)", "/saved/(.*)", "/history/(.*)"],
+};
 
 // Helper function to check if URL matches any pattern
 const matchesPattern = (url: string, patterns: string[]): boolean => {
@@ -41,10 +40,10 @@ const matchesPattern = (url: string, patterns: string[]): boolean => {
   });
 };
 
-// Helper function to check if a role has sufficient permissions
+// Helper function to check if user has required role
 const hasRequiredRole = (
   userRole: Role | undefined,
-  requiredRoles: Role[]
+  requiredRole: Role
 ): boolean => {
   if (!userRole) return false;
 
@@ -55,140 +54,95 @@ const hasRequiredRole = (
     [Role.VIEWER]: 1,
   };
 
-  const userRoleLevel = roleHierarchy[userRole];
-  const requiredRoleLevel = Math.min(
-    ...requiredRoles.map((role) => roleHierarchy[role])
-  );
-
-  return userRoleLevel >= requiredRoleLevel;
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 };
 
 export async function middleware(request: NextRequest) {
   try {
-    // Create a response to modify
-    const response = NextResponse.next();
-
-    // Create a Supabase client configured to use cookies
     const supabase = createMiddlewareClient<Database>({
       req: request,
-      res: response,
+      res: NextResponse.next(),
     });
-
-    // Get the current path
     const url = request.nextUrl.pathname;
-
-    // Handle CORS preflight requests
-    if (request.method === "OPTIONS") {
-      return NextResponse.json({}, { status: 200 });
-    }
-
-    // Handle auth callback route
-    if (url.includes("/auth/callback")) {
-      const requestUrl = new URL(request.url);
-      const code = requestUrl.searchParams.get("code");
-
-      if (code) {
-        // Exchange the code for a session
-        await supabase.auth.exchangeCodeForSession(code);
-        // Redirect to dictionary page after successful sign in
-        return NextResponse.redirect(new URL("/dictionary", requestUrl.origin));
-      }
-    }
 
     // Allow public routes
     if (matchesPattern(url, publicRoutes)) {
-      return response;
+      return NextResponse.next();
     }
 
-    // Refresh session if it exists
+    // Check session
     const {
       data: { session },
       error,
     } = await supabase.auth.getSession();
 
-    // Handle no session for protected routes
-    if ((!session || error) && !matchesPattern(url, publicRoutes)) {
-      const loginUrl = new URL("/login", request.url);
+    // Redirect to login if no session on protected routes
+    if (!session || error) {
+      const loginUrl = new URL("/auth/sign-in", request.url);
       loginUrl.searchParams.set("redirect_url", url);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (session?.user) {
-      // Get user's role and quiz completion status from Supabase profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role, quiz_completed")
-        .eq("id", session.user.id)
-        .single();
+    // Get user's role from profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, quiz_completed")
+      .eq("id", session.user.id)
+      .single();
 
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        return NextResponse.redirect(new URL("/error", request.url));
+    const userRole = profile?.role as Role;
+
+    // Check admin routes
+    if (matchesPattern(url, protectedRoutes.admin)) {
+      if (!hasRequiredRole(userRole, Role.ADMIN)) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
       }
-
-      const userRole = profile?.role as Role | undefined;
-      const quizCompleted = profile?.quiz_completed as boolean;
-
-      // Handle admin routes
-      if (matchesPattern(url, adminRoutes)) {
-        if (!hasRequiredRole(userRole, [Role.ADMIN, Role.SUPER_ADMIN])) {
-          return NextResponse.redirect(new URL("/unauthorized", request.url));
-        }
-      }
-
-      // Handle editor routes
-      if (matchesPattern(url, editorRoutes)) {
-        if (
-          !hasRequiredRole(userRole, [
-            Role.EDITOR,
-            Role.ADMIN,
-            Role.SUPER_ADMIN,
-          ])
-        ) {
-          return NextResponse.redirect(new URL("/unauthorized", request.url));
-        }
-
-        // Additional check for contribute route: verify quiz completion
-        if (url.startsWith("/contribute") && !quizCompleted) {
-          return NextResponse.redirect(new URL("/quiz", request.url));
-        }
-      }
-
-      // Add user information to request headers
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-user-id", session.user.id);
-      requestHeaders.set("x-user-email", session.user.email || "");
-
-      // Add authenticated user's role to headers if available
-      if (userRole) {
-        requestHeaders.set("x-user-role", userRole);
-      }
-
-      // Create a new response with the modified headers
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
     }
 
-    return response;
-  } catch (e) {
-    // Handle any errors that occur during middleware execution
-    console.error("Middleware error:", e);
+    // Check editor routes
+    if (matchesPattern(url, protectedRoutes.editor)) {
+      if (!hasRequiredRole(userRole, Role.EDITOR)) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+
+      // Additional quiz check for contribute routes
+      if (url.startsWith("/contribute") && !profile?.quiz_completed) {
+        return NextResponse.redirect(new URL("/quiz", request.url));
+      }
+    }
+
+    // Check viewer routes
+    if (matchesPattern(url, protectedRoutes.viewer)) {
+      if (!hasRequiredRole(userRole, Role.VIEWER)) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+    }
+
+    // Add user info to request headers
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-user-id", session.user.id);
+    requestHeaders.set("x-user-role", userRole || "");
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  } catch (error) {
+    console.error("Middleware error:", error);
     return NextResponse.redirect(new URL("/error", request.url));
   }
 }
 
+// Update the matcher configuration to exclude unnecessary paths
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (public folder)
+     * Match all paths except:
+     * - api routes that start with /api/public
+     * - Next.js internal routes
+     * - Public assets
      */
-    "/((?!_next/static|_next/image|favicon.ico|public/|assets/).*)",
+    "/((?!api/public|_next/static|_next/image|favicon.ico|assets/).*)",
   ],
 };

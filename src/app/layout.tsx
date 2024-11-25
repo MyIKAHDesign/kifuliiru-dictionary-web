@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { generateMetadata } from "./lib/metadata";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import { ClerkProvider } from "@clerk/nextjs";
+import AuthProvider from "./lib/AuthProvider";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -42,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <AuthProvider>
       <html
         lang="en"
         className={`${playfair.variable} ${sourceSans.variable}`}
@@ -57,6 +57,6 @@ export default function RootLayout({
           </div>
         </body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }
