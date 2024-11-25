@@ -108,7 +108,7 @@ We welcome contributions in various forms:
 - Content creation
 - Community organizing
 
-Contact: imyazimukifuliiru@gmail.com
+Contact: <imyazimukifuliiru@gmail.com>
 
 ## Project Governance
 
