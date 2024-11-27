@@ -110,7 +110,7 @@ We welcome contributions in various forms:
 
 Contact: <imyazimukifuliiru@gmail.com>
 
-## Project Governance
+## Project Governancenpm run dev
 
 - Managed by the Ayivugwe Kabemba Mukome
 - Open-source development approach
