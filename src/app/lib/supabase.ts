@@ -13,15 +13,26 @@ export const supabase = createClient(
 );
 
 // Dictionary Interfaces
+
 export interface DictionaryEntry {
   id: string;
+  created_at: string;
+  status: "pending" | "review" | "revision" | "approved";
   igambo: string;
   kifuliiru: string;
   kiswahili: string;
   kifaransa: string;
   kingereza: string;
-  created_at: string;
-  owner_id: string | null;
+  kishushanyo?: string;
+  holidesirwi?: string;
+  created_date?: string;
+  updated_date?: string;
+  owner_id: string;
+  publish_date?: string;
+  unpublish_date?: string;
+  nayemera_consent?: boolean;
+  igambo_audio_url?: string;
+  kifuliiru_definition_audio_url?: string;
 }
 
 // Numbers Interface
@@ -36,20 +47,16 @@ export interface NumberEntry {
 }
 
 // Dictionary Methods
+
 export async function fetchDictionaryWords(): Promise<DictionaryEntry[]> {
   try {
     const { data, error } = await supabase
       .from("magambo")
-      .select(
-        "id, igambo, kifuliiru, kiswahili, kingereza, kifaransa, created_at, owner_id"
-      )
-      .order("igambo", { ascending: true });
+      .select("*")
+      .in("status", ["approved", "review"])
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Supabase error:", error.message);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (err) {
     console.error("Error fetching dictionary words:", err);
@@ -58,22 +65,25 @@ export async function fetchDictionaryWords(): Promise<DictionaryEntry[]> {
 }
 
 export async function searchDictionaryWords(
-  query: string
+  searchQuery: string
 ): Promise<DictionaryEntry[]> {
   try {
+    const sanitizedQuery = searchQuery.replace(/[%_]/g, "\\$&");
+
     const { data, error } = await supabase
       .from("magambo")
       .select("*")
+      .in("status", ["approved", "review"])
       .or(
-        `igambo.ilike.%${query}%,kifuliiru.ilike.%${query}%,kiswahili.ilike.%${query}%,kingereza.ilike.%${query}%,kifaransa.ilike.%${query}%`
+        `igambo.ilike.%${sanitizedQuery}%,
+         kifuliiru.ilike.%${sanitizedQuery}%,
+         kiswahili.ilike.%${sanitizedQuery}%,
+         kingereza.ilike.%${sanitizedQuery}%,
+         kifaransa.ilike.%${sanitizedQuery}%`
       )
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Supabase error:", error.message);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (err) {
     console.error("Error searching dictionary words:", err);
