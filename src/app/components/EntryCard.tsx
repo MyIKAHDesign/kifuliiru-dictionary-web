@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import {
   Volume2,
   Pencil,
@@ -8,7 +9,23 @@ import {
   Clock,
   AlertCircle,
   RotateCcw,
+  VolumeX,
+  LucideIcon,
 } from "lucide-react";
+
+interface AudioState {
+  isPlaying: boolean;
+  hasError: boolean;
+  progress: number;
+  duration: number;
+}
+
+interface StatusConfig {
+  icon: LucideIcon;
+  color: string;
+  bgColor: string;
+  label: string;
+}
 
 interface EntryCardProps {
   entry: {
@@ -29,16 +46,24 @@ export default function EntryCard({
   onEdit,
   showControls = true,
 }: EntryCardProps) {
-  const [wordAudioState, setWordAudioState] = useState({
+  const supabase = createClientComponentClient();
+  const [wordAudioState, setWordAudioState] = useState<AudioState>({
     isPlaying: false,
     hasError: false,
+    progress: 0,
+    duration: 0,
   });
-  const [definitionAudioState, setDefinitionAudioState] = useState({
+  const [definitionAudioState, setDefinitionAudioState] = useState<AudioState>({
     isPlaying: false,
     hasError: false,
+    progress: 0,
+    duration: 0,
   });
 
-  const statusConfig = {
+  const wordAudioRef = useRef<HTMLAudioElement | null>(null);
+  const definitionAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const statusConfig: Record<string, StatusConfig> = {
     pending: {
       icon: Clock,
       color: "text-blue-600",
@@ -66,32 +91,124 @@ export default function EntryCard({
   };
 
   const playAudio = async (
-    audioUrl: string | undefined,
-    setAudioState: typeof setWordAudioState
+    storagePath: string | undefined,
+    setAudioState: typeof setWordAudioState,
+    audioRef: React.RefObject<HTMLAudioElement>
   ) => {
-    if (!audioUrl) {
-      setAudioState({ isPlaying: false, hasError: true });
+    if (!storagePath) {
+      setAudioState((prev) => ({ ...prev, hasError: true }));
       return;
     }
 
+    let objectUrl: string | null = null;
+
     try {
-      setAudioState({ isPlaying: true, hasError: false });
-      const audio = new Audio(audioUrl);
+      const { data } = await supabase.storage
+        .from("audio-recordings")
+        .download(storagePath);
 
-      audio.addEventListener("ended", () => {
-        setAudioState({ isPlaying: false, hasError: false });
-      });
+      if (!data) {
+        throw new Error("Could not download audio");
+      }
 
-      audio.addEventListener("error", () => {
-        setAudioState({ isPlaying: false, hasError: true });
-      });
+      objectUrl = URL.createObjectURL(data);
 
-      await audio.play();
+      if (audioRef.current) {
+        audioRef.current.src = objectUrl;
+        audioRef.current.play();
+      }
+
+      setAudioState((prev) => ({
+        ...prev,
+        isPlaying: true,
+        hasError: false,
+      }));
     } catch (error) {
       console.error("Error playing audio:", error);
-      setAudioState({ isPlaying: false, hasError: true });
+      setAudioState((prev) => ({ ...prev, hasError: true }));
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     }
   };
+
+  const handleTimeUpdate = (
+    audioRef: HTMLAudioElement,
+    setAudioState: typeof setWordAudioState
+  ) => {
+    const progress = (audioRef.currentTime / audioRef.duration) * 100;
+    setAudioState((prev) => ({
+      ...prev,
+      progress,
+      duration: audioRef.duration,
+    }));
+  };
+
+  const handleAudioEnded = (
+    setAudioState: typeof setWordAudioState,
+    objectUrl?: string
+  ) => {
+    setAudioState((prev) => ({
+      ...prev,
+      isPlaying: false,
+      progress: 0,
+    }));
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  };
+
+  const renderAudioPlayer = (
+    audioUrl: string | undefined,
+    audioState: AudioState,
+    setAudioState: typeof setWordAudioState,
+    audioRef: React.RefObject<HTMLAudioElement>,
+    label: string
+  ) => (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => playAudio(audioUrl, setAudioState, audioRef)}
+        disabled={wordAudioState.isPlaying || definitionAudioState.isPlaying}
+        className={`relative ${
+          audioState.hasError
+            ? "text-red-500 hover:text-red-600"
+            : audioState.isPlaying
+            ? "text-blue-500"
+            : "text-gray-500"
+        }`}
+        title={
+          audioState.hasError
+            ? "Audio unavailable"
+            : audioState.isPlaying
+            ? "Playing..."
+            : `Play ${label} pronunciation`
+        }
+      >
+        {audioState.hasError ? (
+          <VolumeX className="h-4 w-4" />
+        ) : (
+          <Volume2
+            className={`h-4 w-4 ${audioState.isPlaying ? "animate-pulse" : ""}`}
+          />
+        )}
+      </Button>
+
+      {audioState.isPlaying && (
+        <div className="relative w-20 h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-200"
+            style={{ width: `${audioState.progress}%` }}
+          />
+        </div>
+      )}
+
+      <audio
+        ref={audioRef}
+        onTimeUpdate={(e) => handleTimeUpdate(e.currentTarget, setAudioState)}
+        onEnded={() => handleAudioEnded(setAudioState)}
+        onError={() => setAudioState((prev) => ({ ...prev, hasError: true }))}
+        className="hidden"
+      />
+    </div>
+  );
 
   const StatusIcon = entry.status ? statusConfig[entry.status].icon : null;
 
@@ -99,71 +216,36 @@ export default function EntryCard({
     <Card className="p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {entry.igambo}
-            </h3>
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  playAudio(entry.igambo_audio_url, setWordAudioState)
-                }
-                disabled={wordAudioState.isPlaying}
-                className={`${
-                  wordAudioState.hasError
-                    ? "text-red-500 hover:text-red-600"
-                    : ""
-                }`}
-                title={
-                  wordAudioState.hasError
-                    ? "Audio unavailable"
-                    : "Play word pronunciation"
-                }
-              >
-                <Volume2
-                  className={`h-4 w-4 ${
-                    wordAudioState.isPlaying ? "animate-pulse" : ""
-                  }`}
-                />
-              </Button>
-            )}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {entry.igambo}
+              </h3>
+              {showControls &&
+                entry.igambo_audio_url &&
+                renderAudioPlayer(
+                  entry.igambo_audio_url,
+                  wordAudioState,
+                  setWordAudioState,
+                  wordAudioRef,
+                  "word"
+                )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
               {entry.kifuliiru}
             </p>
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  playAudio(
-                    entry.kifuliiru_definition_audio_url,
-                    setDefinitionAudioState
-                  )
-                }
-                disabled={definitionAudioState.isPlaying}
-                className={`${
-                  definitionAudioState.hasError
-                    ? "text-red-500 hover:text-red-600"
-                    : ""
-                }`}
-                title={
-                  definitionAudioState.hasError
-                    ? "Audio unavailable"
-                    : "Play definition pronunciation"
-                }
-              >
-                <Volume2
-                  className={`h-4 w-4 ${
-                    definitionAudioState.isPlaying ? "animate-pulse" : ""
-                  }`}
-                />
-              </Button>
-            )}
+            {showControls &&
+              entry["kifuliiru_definition_audio_url"] &&
+              renderAudioPlayer(
+                entry["kifuliiru_definition_audio_url"],
+                definitionAudioState,
+                setDefinitionAudioState,
+                definitionAudioRef,
+                "definition"
+              )}
           </div>
         </div>
 
@@ -173,6 +255,7 @@ export default function EntryCard({
             size="icon"
             onClick={() => onEdit(entry.id)}
             className="hover:text-blue-600"
+            title="Edit entry"
           >
             <Pencil className="h-4 w-4" />
           </Button>
