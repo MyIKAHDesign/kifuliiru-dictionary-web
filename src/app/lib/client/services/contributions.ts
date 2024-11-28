@@ -1,6 +1,6 @@
 // app/lib/client/services/contributions.ts
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { Database } from "@/app/lib/types/supabase";
+import { Database } from "../../supabase";
 
 export type MagamboEntry = Database["public"]["Tables"]["magambo"]["Row"];
 export type MagamboInsert = Database["public"]["Tables"]["magambo"]["Insert"];
