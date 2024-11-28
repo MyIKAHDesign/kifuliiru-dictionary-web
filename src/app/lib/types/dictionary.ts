@@ -47,17 +47,24 @@ export interface Multimedia {
 
 // Main dictionary entry interface
 export interface DictionaryEntry {
-  id?: string;
-  word: string;
-  ipa: string;
-  partOfSpeech: PartOfSpeech;
-  dialectVariations: string[];
-  kifuliiru: KifuliiruContent;
-  translations: Translations;
-  culturalContext: CulturalContext;
-  multimedia: Multimedia;
-  status: EntryStatus;
-  metadata?: EntryMetadata;
+  id: string;
+  created_at: string;
+  igambo: string;
+  kifuliiru: string;
+  kiswahili: string;
+  kifaransa: string;
+  kingereza: string;
+  kishushanyo?: string;
+  holidesirwi?: string;
+  created_date?: string;
+  updated_date?: string;
+  owner_id: string;
+  publish_date?: string;
+  unpublish_date?: string;
+  nayemera_consent?: boolean;
+  igambo_audio_url?: string;
+  kifuliiru_definition_audio_url?: string;
+  status?: string;
 }
 
 // Form data interface (extends DictionaryEntry with form-specific fields)
@@ -219,3 +226,9 @@ export const VALID_FILE_TYPES = {
   images: ["image/jpeg", "image/png", "image/webp"],
   videos: ["video/mp4", "video/webm"],
 } as const;
+
+// types/dictionary.ts
+
+export interface EntryWithStatus extends DictionaryEntry {
+  submissionStatus: "pending" | "review" | "revision" | "approved";
+}
