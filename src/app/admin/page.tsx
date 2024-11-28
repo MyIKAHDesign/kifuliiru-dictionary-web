@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import {
   Users,
   Book,
@@ -9,8 +11,10 @@ import {
   Check,
   X,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import DictionaryManagement from "./dictionary_management";
+import { Database } from "../lib/supabase";
 
 interface Activity {
   type: "new_entry" | "update" | "validation";
@@ -153,6 +157,58 @@ const UsersManagement: React.FC = () => (
 const AdminDashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [pendingEntries] = useState(5);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  const router = useRouter();
+  const supabase = createClientComponentClient<Database>();
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        // Check if user is authenticated
+        const {
+          data: { session },
+          error: authError,
+        } = await supabase.auth.getSession();
+
+        if (authError || !session) {
+          router.push(`/auth/sign-in?redirect_url=${window.location.pathname}`);
+          return;
+        }
+
+        // Get user's role from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role, email")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error("Error fetching user profile:", profileError);
+          router.push("/unauthorized");
+          return;
+        }
+
+        // Check if user has admin privileges
+        if (profile.role !== "admin" && profile.role !== "super_admin") {
+          router.push("/unauthorized");
+          return;
+        }
+
+        setUserEmail(profile.email);
+        setIsAuthorized(true);
+      } catch (error) {
+        console.error("Error during authentication check:", error);
+        router.push("/unauthorized");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkAuth();
+  }, [router, supabase]);
 
   const sidebarItems = [
     { id: "overview", label: "Overview", icon: Settings },
@@ -189,7 +245,6 @@ const AdminDashboard: React.FC = () => {
     },
   ];
 
-  // Function to render the active section content
   const renderContent = () => {
     switch (activeSection) {
       case "dictionary":
@@ -209,6 +264,23 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading admin dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return null; // Router will handle the redirect
+  }
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
@@ -218,6 +290,11 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-xl font-bold text-gray-800 dark:text-white">
               Kifuliiru Admin
             </h1>
+            {userEmail && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {userEmail}
+              </p>
+            )}
           </div>
 
           <nav className="flex-1 p-4">
