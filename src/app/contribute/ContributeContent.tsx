@@ -153,13 +153,8 @@ const ContributeContent: React.FC = () => {
       <main className="container mx-auto px-4 py-12 max-w-7xl">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Contribute to Kifuliiru Dictionary
+            Add a new word/sentence
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Help expand our dictionary by adding new words and their
-            translations. Your contributions will help preserve and promote the
-            Kifuliiru language.
-          </p>
         </div>
 
         {(error || success) && (
