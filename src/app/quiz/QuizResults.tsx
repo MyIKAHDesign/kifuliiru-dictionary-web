@@ -1,117 +1,163 @@
-// app/quiz/QuizResults.tsx
-import React from "react";
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardFooter,
-} from "@/app/components/ui/card";
+// components/quiz/QuizResults.tsx
+import { motion } from "framer-motion";
+import { CheckCircle, XCircle, ChevronRight, RotateCcw } from "lucide-react";
+import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Progress } from "@/app/components/ui/progress";
-import { Alert, AlertTitle, AlertDescription } from "@/app/components/ui/alert";
-import { CheckCircle, XCircle } from "lucide-react";
-import { QuizResultsProps } from "../lib/types/quiz";
+import { ResultsScreenProps } from "./types";
 
-const QuizResults: React.FC<QuizResultsProps> = ({
+const QuizResults: React.FC<ResultsScreenProps> = ({
   score,
   hasPassedQuiz,
   questions,
   answers,
   questionFeedback,
   onRetry,
+  onContinue,
 }) => {
   return (
-    <div className="py-12">
-      <Card className="w-full max-w-3xl mx-auto">
-        <CardHeader className="text-center">
-          <h2 className="text-2xl font-bold">Quiz Results</h2>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="text-center">
-            <div className="text-6xl font-bold mb-4">{Math.round(score)}%</div>
-            <Progress value={score} className="w-full h-2" />
-          </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen p-4 flex items-center justify-center"
+    >
+      <Card className="w-full max-w-3xl p-8 space-y-8">
+        {/* Score Display */}
+        <div className="text-center space-y-6">
+          <motion.h1
+            className="text-3xl font-bold"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+          >
+            Quiz Results
+          </motion.h1>
 
-          {hasPassedQuiz ? (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle>Congratulations!</AlertTitle>
-              <AlertDescription>
-                You have passed the quiz with a score of {Math.round(score)}%.
-                You can now contribute to the Kifuliiru project.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive">
-              <XCircle className="h-4 w-4" />
-              <AlertTitle>Not Quite There</AlertTitle>
-              <AlertDescription>
-                You scored {Math.round(score)}%. A score of 70% or higher is
-                needed to pass.
-              </AlertDescription>
-            </Alert>
-          )}
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex flex-col items-center"
+          >
+            <span className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              {Math.round(score)}%
+            </span>
+            <Progress value={score} className="w-64 h-2 mt-4" />
+          </motion.div>
 
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Detailed Feedback</h3>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className={`
+              p-4 rounded-lg border-2 
+              ${
+                hasPassedQuiz
+                  ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                  : "border-red-500 bg-red-50 dark:bg-red-900/20"
+              }
+            `}
+          >
+            {hasPassedQuiz ? (
+              <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-medium">
+                  Congratulations! You&apos;ve passed the quiz.
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-300">
+                <XCircle className="h-5 w-5" />
+                <span className="font-medium">
+                  You need a score of 70% or higher to pass.
+                </span>
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Detailed Feedback */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="space-y-6"
+        >
+          <h2 className="text-xl font-semibold">Detailed Feedback</h2>
+
+          <div className="space-y-4">
             {questions.map((question, index) => (
-              <div key={question.id} className="border rounded-lg p-4">
+              <motion.div
+                key={question.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 + index * 0.1 }}
+                className={`
+                  p-4 rounded-lg border 
+                  ${
+                    questionFeedback[index]?.isCorrect
+                      ? "border-green-200 dark:border-green-800"
+                      : "border-red-200 dark:border-red-800"
+                  }
+                `}
+              >
                 <div className="flex items-start gap-3">
                   {questionFeedback[index]?.isCorrect ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                    <XCircle className="h-5 w-5 text-red-500 mt-1" />
                   )}
+
                   <div className="space-y-2 flex-1">
-                    <h4 className="font-medium">
+                    <p className="font-medium">
                       Question {index + 1}: {question.text}
-                    </h4>
-                    <div className="text-sm">
-                      <p className="text-gray-600 dark:text-gray-300">
-                        Your answer:{" "}
-                        {answers[index] === -1
-                          ? "Time expired"
-                          : question.options[answers[index]]}
+                    </p>
+
+                    <div className="text-sm space-y-1">
+                      <p className="text-muted-foreground">
+                        Your answer: {question.options[answers[index]]}
                       </p>
                       {!questionFeedback[index]?.isCorrect && (
-                        <p className="text-gray-600 dark:text-gray-300">
+                        <p className="text-muted-foreground">
                           Correct answer: {question.options[question.correct]}
                         </p>
                       )}
-                      <p className="mt-2 text-gray-700 dark:text-gray-200">
+                      <p className="text-sm mt-2 text-muted-foreground">
                         {question.explanation}
                       </p>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-center gap-4">
+        </motion.div>
+
+        {/* Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 }}
+          className="flex justify-center gap-4 pt-4"
+        >
           {hasPassedQuiz ? (
-            <Link href="/contribute">
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                Proceed to Contribute
-              </Button>
-            </Link>
+            <Button
+              onClick={onContinue}
+              className="h-12 px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            >
+              Continue to Contribute
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           ) : (
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onRetry();
-                }}
-              >
-                Back to Start
+            <>
+              <Button variant="outline" onClick={onRetry} className="h-12 px-8">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Try Again
               </Button>
-              <Button onClick={onRetry}>Try Again</Button>
-            </div>
+            </>
           )}
-        </CardFooter>
+        </motion.div>
       </Card>
-    </div>
+    </motion.div>
   );
 };
 

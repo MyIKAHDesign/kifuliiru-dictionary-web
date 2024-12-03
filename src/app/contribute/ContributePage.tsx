@@ -23,6 +23,7 @@ import type { DictionaryEntry } from "@/app/lib/supabase";
 import EntryCard from "@/app/components/EntryCard";
 import { ScrollArea } from "../components/ui/scroll-area";
 import ContributeContent from "./ContributeContent";
+import { Card } from "../components/ui/card";
 
 const statusTabs = [
   {
@@ -238,7 +239,7 @@ export default function ContributePage() {
     },
   ];
 
-  function renderTabContent() {
+  /* function renderTabContent() {
     if (activeTab === "new") {
       return <ContributeContent />;
     }
@@ -278,12 +279,11 @@ export default function ContributePage() {
         ))}
       </div>
     );
-  }
+  } */
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-4">
             Contribute to the Dictionary
@@ -294,27 +294,24 @@ export default function ContributePage() {
           </p>
         </div>
 
-        {/* Stats Section */}
-        <div className="mb-8">
+        <Card className="mb-8">
           <button
             onClick={() => setIsStatsVisible(!isStatsVisible)}
-            className="w-full flex items-center justify-between p-4 rounded-t-lg bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            className="w-full flex items-center justify-between p-4"
           >
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-purple-500" />
-              <span className="font-medium text-gray-900 dark:text-gray-100">
-                Your Contribution Statistics
-              </span>
+              <span className="font-medium">Your Contribution Statistics</span>
             </div>
             <ChevronDown
-              className={`h-5 w-5 text-gray-500 transition-transform ${
+              className={`h-5 w-5 transition-transform ${
                 isStatsVisible ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {isStatsVisible && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-white dark:bg-gray-800 rounded-b-lg shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 border-t">
               {getStatsData().map((stat) => (
                 <div
                   key={stat.label}
@@ -329,36 +326,37 @@ export default function ContributePage() {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {stat.label}
                     </p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                      {stat.value}
-                    </p>
+                    <p className="text-xl font-bold">{stat.value}</p>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Main Content */}
-        <div
-          className={`w-full border-2 rounded-lg ${activeTabData?.lightBorderColor} transition-colors duration-300 bg-white dark:bg-gray-800`}
-        >
-          {/* Tabs Container */}
-          <div className="w-full overflow-x-auto">
-            <div className="flex space-x-1 p-2 min-w-max">
-              {statusTabs.map((tab) => (
+        <Card className="mb-8 p-6">
+          <h2 className="text-xl font-semibold mb-6">Add New Entry</h2>
+          <ContributeContent />
+        </Card>
+
+        <Card>
+          <div className="p-4 border-b">
+            <h2 className="text-xl font-semibold">Your Contributions</h2>
+          </div>
+
+          <div className="border-b">
+            <div className="flex space-x-1 p-2">
+              {statusTabs.slice(1).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
                     relative flex items-center px-4 py-2.5 rounded-lg gap-2 transition-all duration-200
-                    border-2
                     ${
                       activeTab === tab.id
-                        ? `${tab.bgColor} ${tab.color} ${tab.borderColor}`
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                        ? `${tab.bgColor} ${tab.color}`
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                     }
-                    ${tab.id === "new" ? "border-dashed" : "border-solid"}
                   `}
                 >
                   <tab.icon
@@ -368,17 +366,7 @@ export default function ContributePage() {
                   />
                   <span className="font-medium">{tab.label}</span>
                   {entryCounts[tab.id] > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className={`
-                        px-2 py-0.5 rounded-full text-xs font-medium
-                        ${
-                          activeTab === tab.id
-                            ? `${tab.bgColor} ${tab.color}`
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                        }
-                      `}
-                    >
+                    <Badge variant="secondary" className="ml-1">
                       {entryCounts[tab.id]}
                     </Badge>
                   )}
@@ -387,28 +375,48 @@ export default function ContributePage() {
             </div>
           </div>
 
-          {/* Divider */}
-          <div className={`h-px w-full ${activeTabData?.lightBorderColor}`} />
-
-          {/* Content Container */}
           <div className="p-4">
-            {activeTab !== "new" && (
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                  <Input
-                    placeholder="Search entries..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-12"
-                  />
-                </div>
-              </div>
-            )}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search your entries..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
 
-            <ScrollArea className="h-[600px]">{renderTabContent()}</ScrollArea>
+            <ScrollArea className="h-[400px]">
+              {loading ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : entries.length > 0 ? (
+                <div className="space-y-4">
+                  {entries.map((entry) => (
+                    <EntryCard key={entry.id} entry={entry} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[300px] text-gray-500">
+                  <div className="mb-4">
+                    {activeTabData?.icon && (
+                      <activeTabData.icon className="h-12 w-12 opacity-20" />
+                    )}
+                  </div>
+                  <p className="text-lg">
+                    No {activeTabData?.label.toLowerCase()} entries found
+                  </p>
+                  <p className="text-sm mt-2">
+                    {searchTerm
+                      ? "Try adjusting your search"
+                      : "Start contributing above"}
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

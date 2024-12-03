@@ -1,29 +1,50 @@
-// types.ts
+// types/quiz.ts
 
-export interface QuestionType {
-  question: string;
+export const QUIZ_CONFIG = {
+  PASSING_SCORE: 70,
+  TIME_PER_QUESTION: 45,
+  TOTAL_QUESTIONS: 10,
+} as const;
+
+export interface QuizQuestion {
+  id: string;
+  text: string;
   options: string[];
   correct: number;
   explanation: string;
 }
 
-export interface WelcomeScreenProps {
-  onStart: () => void;
-  questionCount: number;
-  timePerQuestion: number;
-}
-
-export interface QuizResultsProps {
+export interface QuizState {
+  status: "welcome" | "in-progress" | "results";
+  currentQuestion: number;
+  answers: Record<number, number>;
+  timeLeft: number;
   score: number;
   hasPassedQuiz: boolean;
-  questions: QuestionType[];
-  answers: Record<number, number>;
   questionFeedback: Record<number, QuestionFeedback>;
-  onRetry: () => void;
 }
 
-export interface QuestionInterfaceProps {
-  question: QuestionType;
+export interface QuizFeedback {
+  score: number;
+  hasPassedQuiz: boolean;
+  attemptedQuestions: number;
+  correctAnswers: number;
+  questionFeedback: Record<number, QuestionFeedback>;
+}
+
+export interface QuestionFeedback {
+  isCorrect: boolean;
+  userAnswer: number;
+  correctAnswer: number;
+  explanation: string;
+}
+
+export interface WelcomeScreenProps {
+  onStart: () => void;
+}
+
+export interface QuestionScreenProps {
+  question: QuizQuestion;
   questionNumber: number;
   totalQuestions: number;
   timeLeft: number;
@@ -33,9 +54,12 @@ export interface QuestionInterfaceProps {
   onPrevious: () => void;
 }
 
-interface QuestionFeedback {
-  isCorrect: boolean;
-  userAnswer: number;
-  correctAnswer: number;
-  explanation: string;
+export interface ResultsScreenProps {
+  score: number;
+  hasPassedQuiz: boolean;
+  questions: QuizQuestion[];
+  answers: Record<number, number>;
+  questionFeedback: Record<number, QuestionFeedback>;
+  onRetry: () => void;
+  onContinue: () => void;
 }

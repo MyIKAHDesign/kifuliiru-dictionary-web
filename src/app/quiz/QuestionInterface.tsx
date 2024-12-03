@@ -1,85 +1,156 @@
-import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Timer, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Card } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Progress } from "@/app/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
-import { Label } from "@/app/components/ui/label";
 
-interface QuizQuestion {
-  id: number;
-  text: string;
+interface Question {
+  question: string;
   options: string[];
   correct: number;
-  explanation?: string;
+  explanation: string;
 }
 
-interface QuestionInterfaceProps {
-  question: QuizQuestion;
+interface QuestionScreenProps {
+  question: Question | null;
+  currentQuestion: number;
+  totalQuestions: number;
+  timeLeft: number;
   selectedAnswer?: number;
-  onAnswerSelect: (answer: number) => void;
-  showFeedback?: boolean;
+  onAnswer: (answer: number) => void;
+  onNext: () => void;
+  onPrevious: () => void;
 }
 
-export default function QuestionInterface({
+const QuestionInterface = ({
   question,
+  currentQuestion,
+  totalQuestions,
+  timeLeft,
   selectedAnswer,
-  onAnswerSelect,
-  showFeedback = false,
-}: QuestionInterfaceProps) {
-  return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">{question.text}</h3>
-      <RadioGroup
-        value={selectedAnswer?.toString()}
-        onValueChange={(value) => onAnswerSelect(parseInt(value))}
-        className="space-y-4"
-      >
-        {question.options.map((option, index) => (
-          <div
-            key={index}
-            className={`
-              relative flex items-center space-x-3 p-4 rounded-lg 
-              transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 
-              border-2 border-transparent 
-              ${
-                selectedAnswer === index
-                  ? "bg-primary/5 border-primary/30 shadow-sm"
-                  : ""
-              }
-              ${
-                showFeedback && index === question.correct
-                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                  : ""
-              }
-              ${
-                showFeedback &&
-                selectedAnswer === index &&
-                index !== question.correct
-                  ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                  : ""
-              }
-              cursor-pointer
-            `}
-          >
-            <RadioGroupItem
-              value={index.toString()}
-              id={`option-${index}`}
-              disabled={showFeedback}
-            />
-            <Label
-              htmlFor={`option-${index}`}
-              className="flex-grow cursor-pointer font-medium"
-            >
-              {option}
-            </Label>
-          </div>
-        ))}
-      </RadioGroup>
+  onAnswer,
+  onNext,
+  onPrevious,
+}: QuestionScreenProps) => {
+  const progress = (currentQuestion / totalQuestions) * 100;
 
-      {showFeedback && question.explanation && (
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            {question.explanation}
-          </p>
+  // Show loading state if question is not available
+  if (!question) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <Card className="w-full max-w-2xl p-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <p className="text-muted-foreground">Loading question...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen p-4 flex items-center justify-center"
+    >
+      <Card className="w-full max-w-2xl p-8 space-y-8">
+        {/* Header & Progress */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>
+              Question {currentQuestion + 1} of {totalQuestions}
+            </span>
+            <span>{Math.round(progress)}% Complete</span>
+          </div>
+
+          <Progress value={progress} className="h-2" />
+
+          <div className="flex justify-end">
+            <div className="flex items-center gap-2 py-1 px-4 rounded-full bg-muted/50">
+              <Timer className="h-4 w-4" />
+              <span
+                className={`font-mono ${
+                  timeLeft <= 10 ? "text-red-500 font-bold" : ""
+                }`}
+              >
+                {timeLeft}s
+              </span>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Question Content */}
+        <motion.div
+          key={currentQuestion}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <h2 className="text-xl font-semibold leading-tight">
+            {question.question}
+          </h2>
+
+          {/* Options */}
+          <RadioGroup
+            value={selectedAnswer?.toString()}
+            onValueChange={(value) => onAnswer(parseInt(value))}
+            className="space-y-4"
+          >
+            <AnimatePresence mode="wait">
+              {Array.isArray(question.options) &&
+                question.options.map((option, index) => (
+                  <motion.div
+                    key={`${currentQuestion}-${index}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <label
+                      className={`
+                      flex items-center gap-4 p-4 rounded-lg cursor-pointer
+                      border-2 transition-all duration-200
+                      ${
+                        selectedAnswer === index
+                          ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
+                          : "border-muted hover:border-muted-foreground/50"
+                      }
+                    `}
+                    >
+                      <RadioGroupItem value={index.toString()} />
+                      <span className="text-base">{option}</span>
+                    </label>
+                  </motion.div>
+                ))}
+            </AnimatePresence>
+          </RadioGroup>
+        </motion.div>
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-4">
+          <Button
+            variant="outline"
+            onClick={onPrevious}
+            disabled={currentQuestion === 0}
+            className="w-32"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+
+          <Button
+            onClick={onNext}
+            disabled={selectedAnswer === undefined}
+            className="w-32 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          >
+            {currentQuestion === totalQuestions - 1 ? "Finish" : "Next"}
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </Card>
+    </motion.div>
   );
-}
+};
+
+export default QuestionInterface;
