@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import {
   Card,
   CardHeader,
@@ -11,7 +13,7 @@ import {
 } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/app/components/ui/alert";
-import { CheckCircle, XCircle, Timer } from "lucide-react";
+import { CheckCircle, XCircle, Timer, Loader2 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
 import { Label } from "@/app/components/ui/label";
@@ -33,10 +35,26 @@ interface AnswerRecord {
   [key: number]: number;
 }
 
-export default function ContributorQuiz() {
-  const TIME_PER_QUESTION = 45; // 45 seconds per question
+interface UserProfile {
+  id: string;
+  role: string;
+  quiz_completed: boolean;
+  quiz_score: number | null;
+  quiz_attempts: number;
+  last_quiz_attempt: string | null;
+}
 
-  // States
+export default function ContributorQuiz() {
+  const TIME_PER_QUESTION = 45;
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  // Auth and Profile States
+  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Quiz States
   const [hasStarted, setHasStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord>({});
@@ -46,6 +64,85 @@ export default function ContributorQuiz() {
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
   const [questionFeedback, setQuestionFeedback] =
     useState<QuestionFeedbackRecord>({});
+
+  // Check authentication and access rights
+  useEffect(() => {
+    async function checkAccess() {
+      try {
+        const {
+          data: { session },
+          error: authError,
+        } = await supabase.auth.getSession();
+
+        if (authError) throw authError;
+
+        if (!session) {
+          router.push("/auth/sign-in?redirect_url=/quiz");
+          return;
+        }
+
+        // Fetch user profile and role
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select(
+            "id, role, quiz_completed, quiz_score, quiz_attempts, last_quiz_attempt"
+          )
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (!profile) {
+          throw new Error("Profile not found");
+        }
+
+        // Check role permissions
+        if (profile.role === "viewer") {
+          setUserProfile(profile);
+        } else if (["editor", "admin", "super_admin"].includes(profile.role)) {
+          router.push("/contribute");
+          return;
+        } else {
+          throw new Error("Unauthorized: Insufficient permissions");
+        }
+
+        // Check quiz attempts
+        if (profile.quiz_attempts >= 3 && profile.last_quiz_attempt) {
+          const lastAttempt = new Date(profile.last_quiz_attempt);
+          const now = new Date();
+          if (now.getTime() - lastAttempt.getTime() < 24 * 60 * 60 * 1000) {
+            throw new Error(
+              "Maximum quiz attempts reached for today. Please try again tomorrow."
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Access check error:", error);
+        setError(error instanceof Error ? error.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    checkAccess();
+  }, [router, supabase]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (!hasStarted || timeLeft <= 0 || showResults) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, showResults, hasStarted]);
 
   // Quiz Questions
   const questions = [
@@ -172,26 +269,35 @@ export default function ContributorQuiz() {
     },
   ];
 
-  // Continue with handlers and effects in next part...
+  // Handle quiz completion
+  const handleQuizCompletion = async (passed: boolean, finalScore: number) => {
+    if (!userProfile) return;
 
-  // Timer Effect
-  useEffect(() => {
-    if (!hasStarted || timeLeft <= 0 || showResults) return;
+    try {
+      const updates = {
+        quiz_completed: passed,
+        quiz_score: finalScore,
+        quiz_attempts: (userProfile.quiz_attempts || 0) + 1,
+        last_quiz_attempt: new Date().toISOString(),
+        role: passed ? "editor" : "viewer",
+      };
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleTimeUp();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", userProfile.id);
 
-    return () => clearInterval(timer);
-  }, [timeLeft, showResults, hasStarted]);
+      if (error) throw error;
 
-  // Handlers
+      if (passed) {
+        router.push("/contribute");
+      }
+    } catch (error) {
+      console.error("Failed to update quiz results:", error);
+      setError("Failed to save quiz results. Please try again.");
+    }
+  };
+
   const handleTimeUp = () => {
     if (!answers[currentQuestion]) {
       setAnswers((prev) => ({ ...prev, [currentQuestion]: -1 }));
@@ -233,9 +339,13 @@ export default function ContributorQuiz() {
 
     const finalScore = (correctCount / questions.length) * 100;
     setScore(finalScore);
-    setHasPassedQuiz(finalScore >= 70);
+    const passed = finalScore >= 70;
+    setHasPassedQuiz(passed);
     setQuestionFeedback(results);
     setShowResults(true);
+
+    // Update profile with quiz results
+    handleQuizCompletion(passed, finalScore);
   };
 
   const handleRetry = () => {
@@ -253,7 +363,34 @@ export default function ContributorQuiz() {
     setTimeLeft(TIME_PER_QUESTION);
   };
 
-  // Continue with render logic in next part...
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md p-6 text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Access Error
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 1. Welcome Screen
   if (!hasStarted) {
