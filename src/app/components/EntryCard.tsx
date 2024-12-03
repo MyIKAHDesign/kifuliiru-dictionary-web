@@ -12,6 +12,7 @@ import {
   VolumeX,
   LucideIcon,
 } from "lucide-react";
+import { DictionaryEntry } from "../lib/supabase";
 
 interface AudioState {
   isPlaying: boolean;
@@ -28,24 +29,10 @@ interface StatusConfig {
 }
 
 interface EntryCardProps {
-  entry: {
-    id: string;
-    igambo: string;
-    kifuliiru: string;
-    status?: "pending" | "review" | "revision" | "approved";
-    igambo_audio_url?: string;
-    kifuliiru_definition_audio_url?: string;
-    created_at: string;
-  };
-  onEdit?: (id: string) => void;
-  showControls?: boolean;
+  entry: DictionaryEntry;
 }
 
-export default function EntryCard({
-  entry,
-  onEdit,
-  showControls = true,
-}: EntryCardProps) {
+export default function EntryCard({ entry }: EntryCardProps) {
   const supabase = createClientComponentClient();
   const [wordAudioState, setWordAudioState] = useState<AudioState>({
     isPlaying: false,
@@ -221,8 +208,7 @@ export default function EntryCard({
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {entry.igambo}
               </h3>
-              {showControls &&
-                entry.igambo_audio_url &&
+              {entry.igambo_audio_url &&
                 renderAudioPlayer(
                   entry.igambo_audio_url,
                   wordAudioState,
@@ -237,8 +223,7 @@ export default function EntryCard({
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
               {entry.kifuliiru}
             </p>
-            {showControls &&
-              entry["kifuliiru_definition_audio_url"] &&
+            {entry["kifuliiru_definition_audio_url"] &&
               renderAudioPlayer(
                 entry["kifuliiru_definition_audio_url"],
                 definitionAudioState,
@@ -249,17 +234,17 @@ export default function EntryCard({
           </div>
         </div>
 
-        {showControls && onEdit && (
+        {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onEdit(entry.id)}
+            //onClick={() => onEdit(entry.id)}
             className="hover:text-blue-600"
             title="Edit entry"
           >
             <Pencil className="h-4 w-4" />
           </Button>
-        )}
+        }
       </div>
 
       {entry.status && (
