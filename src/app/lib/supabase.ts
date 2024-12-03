@@ -322,3 +322,60 @@ export async function searchDictionaryWords(
     throw err;
   }
 }
+
+// Numbers Methods
+
+// Numbers Interface
+export interface NumberEntry {
+  id: number;
+  created_at: string;
+  muharuro: number;
+  kifuliiru: string;
+  kingereza: string;
+  kifaransa: string;
+  kiswahili: string;
+}
+export async function fetchNumbers(): Promise<NumberEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("kuharura")
+      .select("*")
+      .order("muharuro", { ascending: true });
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+      throw error;
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching numbers:", err);
+    return [];
+  }
+}
+
+export async function searchNumbers(query: string): Promise<NumberEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("kuharura")
+      .select("*")
+      .or(
+        `muharuro.ilike.%${query}%,
+        kifuliiru.ilike.%${query}%,
+        kingereza.ilike.%${query}%,
+        kifaransa.ilike.%${query}%,
+        kiswahili.ilike.%${query}%`
+      )
+      .order("muharuro", { ascending: true });
+
+    if (error) {
+      console.error("Error searching numbers:", error.message);
+      throw error;
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Error searching numbers:", err);
+    return [];
+  }
+}
