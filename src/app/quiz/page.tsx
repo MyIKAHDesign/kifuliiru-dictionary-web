@@ -188,34 +188,7 @@ export default function QuizPage() {
     }
   };
 
-  const handleAnswer = async (optionId: string) => {
-    const currentQuestion = questions[quizState.currentQuestionIndex];
-    const selectedOption = currentQuestion.options.find(
-      (opt) => opt.id.toString() === optionId
-    );
-
-    // Record response
-    if (quizState.attemptId) {
-      await supabase.from("quiz_responses").insert({
-        attempt_id: quizState.attemptId,
-        question_id: currentQuestion.id,
-        selected_option_id: selectedOption?.id || null,
-        is_correct: selectedOption?.is_correct || false,
-        time_spent: SECONDS_PER_QUESTION - quizState.timeLeft,
-        response_order: quizState.currentQuestionIndex,
-      });
-    }
-
-    setQuizState((prev) => ({
-      ...prev,
-      answers: {
-        ...prev.answers,
-        [currentQuestion.id]: selectedOption?.id || -1,
-      },
-    }));
-  };
-
-  const calculateScore = async (): Promise<number> => {
+  /* const calculateScore = async (): Promise<number> => {
     if (!quizState.attemptId) return 0;
 
     const { data: responses } = await supabase
@@ -227,74 +200,7 @@ export default function QuizPage() {
 
     const correctAnswers = responses.filter((r) => r.is_correct).length;
     return (correctAnswers / questions.length) * 100;
-  };
-
-  const handleNext = async () => {
-    if (quizState.currentQuestionIndex < questions.length - 1) {
-      setQuizState((prev) => ({
-        ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
-        timeLeft: SECONDS_PER_QUESTION,
-      }));
-
-      // Update progress
-      if (quizState.attemptId) {
-        await supabase.from("quiz_progress").upsert({
-          id: quizState.attemptId,
-          current_question: quizState.currentQuestionIndex + 1,
-          time_left: SECONDS_PER_QUESTION,
-        });
-      }
-    } else {
-      await completeQuiz();
-    }
-  };
-
-  const completeQuiz = async () => {
-    try {
-      if (!quizState.attemptId) return;
-
-      const score = await calculateScore();
-      const passed = score >= PASSING_SCORE;
-
-      // Update attempt
-      await supabase
-        .from("quiz_attempts")
-        .update({
-          completed_at: new Date().toISOString(),
-          score,
-        })
-        .eq("id", quizState.attemptId);
-
-      // If passed, update user role
-      if (passed) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session?.user?.id) {
-          await supabase
-            .from("profiles")
-            .update({
-              role: "contributor",
-              quiz_completed: true,
-              quiz_score: score,
-              quiz_completed_at: new Date().toISOString(),
-            })
-            .eq("id", session.user.id);
-        }
-      }
-
-      setQuizState((prev) => ({
-        ...prev,
-        score,
-        hasPassed: passed,
-        isComplete: true,
-      }));
-    } catch (err) {
-      console.error("Error completing quiz:", err);
-      setError("Failed to complete quiz. Please try again.");
-    }
-  };
+  }; */
 
   const handleStartQuiz = async () => {
     try {
@@ -319,6 +225,233 @@ export default function QuizPage() {
       </div>
     );
   }
+
+  ////////////@NewCode///////////////////
+  // Add these functions in your QuizPage component
+
+  // Track quiz progress
+  const updateQuizProgress = async () => {
+    if (!quizState.attemptId) return;
+
+    try {
+      const { error } = await supabase.from("quiz_progress").upsert({
+        id: quizState.attemptId,
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        quiz_type: "contributor",
+        current_question: quizState.currentQuestionIndex,
+        answers: quizState.answers,
+        time_left: quizState.timeLeft,
+        start_time: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating quiz progress:", error);
+    }
+  };
+
+  // Save each answer
+  const saveQuizResponse = async (
+    questionId: number,
+    selectedOptionId: number
+  ) => {
+    if (!quizState.attemptId) {
+      console.error("No quiz attempt ID found");
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user found");
+      return;
+    }
+
+    try {
+      // First validate the response data
+      if (
+        !Number.isInteger(questionId) ||
+        !Number.isInteger(selectedOptionId)
+      ) {
+        throw new Error("Invalid question or option ID");
+      }
+
+      // Get the correct option for this question
+      const currentQuestion = questions.find((q) => q.id === questionId);
+      if (!currentQuestion) {
+        throw new Error("Question not found");
+      }
+
+      const isCorrect =
+        currentQuestion.options.find((opt) => opt.id === selectedOptionId)
+          ?.is_correct || false;
+
+      // Save the response
+      const { error: responseError } = await supabase
+        .from("quiz_responses")
+        .insert({
+          attempt_id: quizState.attemptId,
+          user_id: session.user.id,
+          question_id: questionId,
+          selected_option_id: selectedOptionId,
+          is_correct: isCorrect,
+          time_spent: SECONDS_PER_QUESTION - quizState.timeLeft,
+          response_order: quizState.currentQuestionIndex,
+        });
+
+      if (responseError) {
+        throw responseError;
+      }
+
+      // Update the attempt progress
+      const { error: progressError } = await supabase
+        .from("quiz_attempts")
+        .update({
+          current_question: quizState.currentQuestionIndex,
+          last_response_at: new Date().toISOString(),
+          answers: {
+            ...quizState.answers,
+            [questionId]: selectedOptionId,
+          },
+        })
+        .eq("id", quizState.attemptId);
+
+      if (progressError) {
+        throw progressError;
+      }
+    } catch (error) {
+      console.error("Error saving quiz response:", error);
+      // Optionally set an error state here if you want to show it to the user
+      setError(
+        error instanceof Error ? error.message : "Failed to save response"
+      );
+    }
+  };
+
+  // Update handleNext to include progress tracking
+  const handleNext = async () => {
+    await updateQuizProgress();
+
+    if (quizState.currentQuestionIndex < questions.length - 1) {
+      setQuizState((prev) => ({
+        ...prev,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+        timeLeft: SECONDS_PER_QUESTION,
+      }));
+    } else {
+      await completeQuiz();
+    }
+  };
+
+  // Update handleAnswer to use the new saveQuizResponse
+  const handleAnswer = async (optionId: string) => {
+    const currentQuestion = questions[quizState.currentQuestionIndex];
+    const selectedOptionId = parseInt(optionId);
+
+    // Update local state first for immediate UI response
+    setQuizState((prev) => ({
+      ...prev,
+      answers: {
+        ...prev.answers,
+        [currentQuestion.id]: selectedOptionId,
+      },
+    }));
+
+    // Then save to database
+    await saveQuizResponse(currentQuestion.id, selectedOptionId);
+  };
+
+  const calculateScore = async (): Promise<number> => {
+    if (!quizState.attemptId) {
+      return 0;
+    }
+
+    // Fetch all responses for this attempt
+    const { data: responses, error } = await supabase
+      .from("quiz_responses")
+      .select("is_correct")
+      .eq("attempt_id", quizState.attemptId);
+
+    if (error) {
+      console.error("Error calculating score:", error);
+      return 0;
+    }
+
+    if (!responses || responses.length === 0) {
+      return 0;
+    }
+
+    // Calculate percentage of correct answers
+    const correctAnswers = responses.filter(
+      (response) => response.is_correct
+    ).length;
+    return (correctAnswers / questions.length) * 100;
+  };
+
+  // Update completeQuiz with better error handling
+  const completeQuiz = async () => {
+    try {
+      if (!quizState.attemptId) {
+        throw new Error("No quiz attempt ID found");
+      }
+
+      const score = await calculateScore();
+      const passed = score >= PASSING_SCORE;
+
+      // Update quiz attempt with final results
+      const { error: attemptError } = await supabase
+        .from("quiz_attempts")
+        .update({
+          completed_at: new Date().toISOString(),
+          score,
+          is_passed: passed,
+          total_questions: questions.length,
+        })
+        .eq("id", quizState.attemptId);
+
+      if (attemptError) throw attemptError;
+
+      // If passed, update user role
+      if (passed) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          throw new Error("No authenticated user found");
+        }
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            role: "contributor",
+            quiz_completed: true,
+            quiz_score: score,
+            quiz_completed_at: new Date().toISOString(),
+          })
+          .eq("id", session.user.id);
+
+        if (profileError) throw profileError;
+      }
+
+      // Update UI state
+      setQuizState((prev) => ({
+        ...prev,
+        score,
+        hasPassed: passed,
+        isComplete: true,
+      }));
+    } catch (error) {
+      console.error("Error completing quiz:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to complete quiz. Please try again."
+      );
+    }
+  };
+
+  ////////////fin@NewCode///////////////
 
   if (!hasStarted) {
     return (
