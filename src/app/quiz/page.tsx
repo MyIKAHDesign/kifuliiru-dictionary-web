@@ -1,23 +1,9 @@
-// app/quiz/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/app/components/ui/alert";
-import { Progress } from "@/app/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
-import { Label } from "@/app/components/ui/label";
-import { Timer, CheckCircle, XCircle } from "lucide-react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { BookOpen, Clock, CheckCircle2, HelpCircle, Timer } from "lucide-react";
 
 interface QuizQuestion {
   id: number;
@@ -41,7 +27,7 @@ interface QuestionWithOptions extends QuizQuestion {
 
 interface QuizState {
   currentQuestionIndex: number;
-  answers: Record<string, number>; // question_id -> selected_option_id
+  answers: Record<string, number>;
   timeLeft: number;
   score: number;
   hasPassed: boolean;
@@ -57,10 +43,7 @@ export default function QuizPage() {
   const supabase = createClientComponentClient();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [, setError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
-  const [, setUserRole] = useState<string | null>(null);
-  const [hasStarted, setHasStarted] = useState(false);
   const [quizState, setQuizState] = useState<QuizState>({
     currentQuestionIndex: 0,
     answers: {},
@@ -70,286 +53,56 @@ export default function QuizPage() {
     isComplete: false,
     attemptId: null,
   });
+  const [hasStarted, setHasStarted] = useState(false);
 
-  // Function to fetch questions with their options
-  const fetchQuestionsWithOptions = async () => {
-    // Fetch questions
-    const { data: questionsData, error: questionsError } = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("quiz_type", "contributor")
-      .order("order_number")
-      .limit(10);
-
-    if (questionsError) throw questionsError;
-
-    // Fetch options for all questions
-    const questionIds = questionsData.map((q) => q.id);
-    const { data: optionsData, error: optionsError } = await supabase
-      .from("quiz_options")
-      .select("*")
-      .in("question_id", questionIds)
-      .order("option_order");
-
-    if (optionsError) throw optionsError;
-
-    // Combine questions with their options
-    return questionsData.map((question: QuizQuestion) => ({
-      ...question,
-      options: optionsData.filter((opt) => opt.question_id === question.id),
-    }));
-  };
-
-  // Initialize quiz
   useEffect(() => {
-    async function initializeQuiz() {
+    async function fetchQuestions() {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) {
-          router.push("/auth/sign-in?redirect=/quiz");
-          return;
-        }
+        // Fetch questions from the database
+        const { data: questionsData, error: questionsError } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .eq("quiz_type", "contributor")
+          .order("order_number")
+          .limit(10);
 
-        // Check user role
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
+        if (questionsError) throw questionsError;
 
-        if (profileError) throw profileError;
-        setUserRole(profile?.role || "viewer");
+        // Fetch options for all questions
+        const questionIds = questionsData.map((q) => q.id);
+        const { data: optionsData, error: optionsError } = await supabase
+          .from("quiz_options")
+          .select("*")
+          .in("question_id", questionIds)
+          .order("option_order");
 
-        if (profile?.role === "contributor") {
-          router.push("/contribute");
-          return;
-        }
+        if (optionsError) throw optionsError;
 
-        const questionsWithOptions = await fetchQuestionsWithOptions();
+        // Combine questions with their options
+        const questionsWithOptions = questionsData.map((question) => ({
+          ...question,
+          options: optionsData.filter(
+            (option) => option.question_id === question.id
+          ),
+        }));
+
         setQuestions(questionsWithOptions);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load quiz");
+      } catch (error) {
+        console.error("Error fetching questions:", error);
       } finally {
         setIsLoading(false);
       }
     }
 
-    initializeQuiz();
-  }, [supabase, router]);
+    fetchQuestions();
+  }, [supabase]);
 
-  // Timer effect
-  useEffect(() => {
-    if (hasStarted && !quizState.isComplete && !isLoading) {
-      const timer = setInterval(() => {
-        setQuizState((prev) => {
-          if (prev.timeLeft <= 1) {
-            handleTimeUp();
-            return { ...prev, timeLeft: 0 };
-          }
-          return { ...prev, timeLeft: prev.timeLeft - 1 };
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [hasStarted, quizState.isComplete, isLoading]);
-
-  // Start new quiz attempt
-  const startNewAttempt = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.id) throw new Error("No authenticated user");
-
-    const { data: attempt, error } = await supabase
-      .from("quiz_attempts")
-      .insert({
-        user_id: session.user.id,
-        quiz_type: "contributor",
-        started_at: new Date().toISOString(),
-        current_question: 0,
-        score: 0,
-        total_questions: questions.length,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return attempt.id;
+  const handleStartQuiz = () => {
+    setHasStarted(true);
   };
 
-  const handleTimeUp = () => {
+  const handleAnswer = (selectedOptionId: number) => {
     const currentQuestion = questions[quizState.currentQuestionIndex];
-    if (!quizState.answers[currentQuestion.id]) {
-      handleAnswer("-1");
-      handleNext();
-    }
-  };
-
-  /* const calculateScore = async (): Promise<number> => {
-    if (!quizState.attemptId) return 0;
-
-    const { data: responses } = await supabase
-      .from("quiz_responses")
-      .select("is_correct")
-      .eq("attempt_id", quizState.attemptId);
-
-    if (!responses) return 0;
-
-    const correctAnswers = responses.filter((r) => r.is_correct).length;
-    return (correctAnswers / questions.length) * 100;
-  }; */
-
-  const handleStartQuiz = async () => {
-    try {
-      const attemptId = await startNewAttempt();
-      setQuizState((prev) => ({ ...prev, attemptId }));
-      setHasStarted(true);
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to start quiz. Please try again.";
-
-      setError(errorMessage);
-      console.error("Error starting quiz:", error);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  ////////////@NewCode///////////////////
-  // Add these functions in your QuizPage component
-
-  // Track quiz progress
-  const updateQuizProgress = async () => {
-    if (!quizState.attemptId) return;
-
-    try {
-      const { error } = await supabase.from("quiz_progress").upsert({
-        id: quizState.attemptId,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        quiz_type: "contributor",
-        current_question: quizState.currentQuestionIndex,
-        answers: quizState.answers,
-        time_left: quizState.timeLeft,
-        start_time: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error updating quiz progress:", error);
-    }
-  };
-
-  // Save each answer
-  const saveQuizResponse = async (
-    questionId: number,
-    selectedOptionId: number
-  ) => {
-    if (!quizState.attemptId) {
-      console.error("No quiz attempt ID found");
-      return;
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.id) {
-      console.error("No authenticated user found");
-      return;
-    }
-
-    try {
-      // First validate the response data
-      if (
-        !Number.isInteger(questionId) ||
-        !Number.isInteger(selectedOptionId)
-      ) {
-        throw new Error("Invalid question or option ID");
-      }
-
-      // Get the correct option for this question
-      const currentQuestion = questions.find((q) => q.id === questionId);
-      if (!currentQuestion) {
-        throw new Error("Question not found");
-      }
-
-      const isCorrect =
-        currentQuestion.options.find((opt) => opt.id === selectedOptionId)
-          ?.is_correct || false;
-
-      // Save the response
-      const { error: responseError } = await supabase
-        .from("quiz_responses")
-        .insert({
-          attempt_id: quizState.attemptId,
-          user_id: session.user.id,
-          question_id: questionId,
-          selected_option_id: selectedOptionId,
-          is_correct: isCorrect,
-          time_spent: SECONDS_PER_QUESTION - quizState.timeLeft,
-          response_order: quizState.currentQuestionIndex,
-        });
-
-      if (responseError) {
-        throw responseError;
-      }
-
-      // Update the attempt progress
-      const { error: progressError } = await supabase
-        .from("quiz_attempts")
-        .update({
-          current_question: quizState.currentQuestionIndex,
-          last_response_at: new Date().toISOString(),
-          answers: {
-            ...quizState.answers,
-            [questionId]: selectedOptionId,
-          },
-        })
-        .eq("id", quizState.attemptId);
-
-      if (progressError) {
-        throw progressError;
-      }
-    } catch (error) {
-      console.error("Error saving quiz response:", error);
-      // Optionally set an error state here if you want to show it to the user
-      setError(
-        error instanceof Error ? error.message : "Failed to save response"
-      );
-    }
-  };
-
-  // Update handleNext to include progress tracking
-  const handleNext = async () => {
-    await updateQuizProgress();
-
-    if (quizState.currentQuestionIndex < questions.length - 1) {
-      setQuizState((prev) => ({
-        ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
-        timeLeft: SECONDS_PER_QUESTION,
-      }));
-    } else {
-      await completeQuiz();
-    }
-  };
-
-  // Update handleAnswer to use the new saveQuizResponse
-  const handleAnswer = async (optionId: string) => {
-    const currentQuestion = questions[quizState.currentQuestionIndex];
-    const selectedOptionId = parseInt(optionId);
-
-    // Update local state first for immediate UI response
     setQuizState((prev) => ({
       ...prev,
       answers: {
@@ -357,268 +110,228 @@ export default function QuizPage() {
         [currentQuestion.id]: selectedOptionId,
       },
     }));
-
-    // Then save to database
-    await saveQuizResponse(currentQuestion.id, selectedOptionId);
   };
 
-  const calculateScore = async (): Promise<number> => {
-    if (!quizState.attemptId) {
-      return 0;
-    }
-
-    // Fetch all responses for this attempt
-    const { data: responses, error } = await supabase
-      .from("quiz_responses")
-      .select("is_correct")
-      .eq("attempt_id", quizState.attemptId);
-
-    if (error) {
-      console.error("Error calculating score:", error);
-      return 0;
-    }
-
-    if (!responses || responses.length === 0) {
-      return 0;
-    }
-
-    // Calculate percentage of correct answers
-    const correctAnswers = responses.filter(
-      (response) => response.is_correct
-    ).length;
-    return (correctAnswers / questions.length) * 100;
-  };
-
-  // Update completeQuiz with better error handling
-  const completeQuiz = async () => {
-    try {
-      if (!quizState.attemptId) {
-        throw new Error("No quiz attempt ID found");
-      }
-
-      const score = await calculateScore();
-      const passed = score >= PASSING_SCORE;
-
-      // Update quiz attempt with final results
-      const { error: attemptError } = await supabase
-        .from("quiz_attempts")
-        .update({
-          completed_at: new Date().toISOString(),
-          score,
-          is_passed: passed,
-          total_questions: questions.length,
-        })
-        .eq("id", quizState.attemptId);
-
-      if (attemptError) throw attemptError;
-
-      // If passed, update user role
-      if (passed) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user?.id) {
-          throw new Error("No authenticated user found");
-        }
-
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            role: "contributor",
-            quiz_completed: true,
-            quiz_score: score,
-            quiz_completed_at: new Date().toISOString(),
-          })
-          .eq("id", session.user.id);
-
-        if (profileError) throw profileError;
-      }
-
-      // Update UI state
+  const handleNext = () => {
+    if (quizState.currentQuestionIndex < questions.length - 1) {
       setQuizState((prev) => ({
         ...prev,
-        score,
-        hasPassed: passed,
-        isComplete: true,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+        timeLeft: SECONDS_PER_QUESTION,
       }));
-    } catch (error) {
-      console.error("Error completing quiz:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to complete quiz. Please try again."
-      );
+    } else {
+      completeQuiz();
     }
   };
 
-  ////////////fin@NewCode///////////////
+  const completeQuiz = () => {
+    const correctAnswers = questions.filter((q) =>
+      q.options.some(
+        (opt) => opt.is_correct && opt.id === quizState.answers[q.id]
+      )
+    ).length;
 
-  if (!hasStarted) {
+    const score = (correctAnswers / questions.length) * 100;
+
+    setQuizState((prev) => ({
+      ...prev,
+      score,
+      hasPassed: score >= PASSING_SCORE,
+      isComplete: true,
+    }));
+  };
+
+  if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Contributor Quiz</CardTitle>
-            <CardDescription>
-              Pass this quiz to become a contributor and help build the
-              Kifuliiru dictionary.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Quiz Details:</h3>
-              <ul className="space-y-2 list-disc list-inside text-sm">
-                <li>{questions.length} questions to answer</li>
-                <li>{SECONDS_PER_QUESTION} seconds per question</li>
-                <li>{PASSING_SCORE}% required to pass</li>
-                <li>
-                  You&apos;ll become a contributor immediately upon passing
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleStartQuiz} className="w-full">
-              Start Quiz
-            </Button>
-          </CardFooter>
-        </Card>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-orange-500"></div>
       </div>
     );
   }
-
-  if (quizState.isComplete) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center">Quiz Results</CardTitle>
-            <CardDescription className="text-center text-xl">
-              Your Score: {Math.round(quizState.score)}%
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Progress value={quizState.score} className="w-full h-2" />
-
-            {quizState.hasPassed ? (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertTitle>Congratulations!</AlertTitle>
-                <AlertDescription>
-                  You are now a contributor! You can start adding entries to the
-                  Kifuliiru dictionary.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Not Quite There</AlertTitle>
-                <AlertDescription>
-                  You need {PASSING_SCORE}% to pass. Feel free to try again when
-                  you&apos;re ready.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            {quizState.hasPassed ? (
-              <Button
-                onClick={() => router.push("/contribute")}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Start Contributing
-              </Button>
-            ) : (
-              <Button onClick={() => router.push("/")} variant="outline">
-                Return Home
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[quizState.currentQuestionIndex];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <div className="flex justify-between items-center mb-4">
-            <CardTitle>
-              Question {quizState.currentQuestionIndex + 1} of{" "}
-              {questions.length}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Timer className="h-4 w-4" />
-              <span
-                className={`font-mono ${
-                  quizState.timeLeft <= 10 ? "text-red-500" : ""
-                }`}
-              >
-                {quizState.timeLeft}s
-              </span>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
+      {!hasStarted ? (
+        <div className="max-w-2xl mx-auto space-y-8 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Kifuliiru Contributor Quiz
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Complete this quiz to gain contributor access to the Kifuliiru
+              Dictionary.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg flex items-start space-x-3">
+              <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {questions.length} Questions
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Multiple choice format
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-start space-x-3">
+              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {SECONDS_PER_QUESTION} Seconds
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Per question time limit
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-start space-x-3">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {PASSING_SCORE}% to Pass
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Required score threshold
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg flex items-start space-x-3">
+              <HelpCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  Need Help?
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Review guidelines before starting
+                </p>
+              </div>
             </div>
           </div>
-          <Progress
-            value={(quizState.currentQuestionIndex / questions.length) * 100}
-            className="w-full h-2"
-          />
-        </CardHeader>
 
-        <CardContent className="space-y-6">
-          <h3 className="text-lg font-medium">
-            {currentQuestion.question_text}
-          </h3>
+          <div className="pt-4">
+            <button
+              onClick={handleStartQuiz}
+              className="w-full bg-orange-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-orange-700 transform transition-all duration-200"
+            >
+              Start Quiz
+            </button>
+          </div>
+        </div>
+      ) : !quizState.isComplete ? (
+        <div className="mt-8 max-w-2xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Question {quizState.currentQuestionIndex + 1} of{" "}
+              {questions.length}
+            </div>
+            <div className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+              <Timer className="w-5 h-5" />
+              <span className="font-mono">{quizState.timeLeft}s</span>
+            </div>
+          </div>
 
-          <RadioGroup
-            value={quizState.answers[currentQuestion.id]?.toString()}
-            onValueChange={handleAnswer}
-            className="space-y-3"
-          >
-            {currentQuestion.options.map((option) => (
-              <div
+          <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full">
+            <div
+              className="bg-orange-600 h-2 rounded-full"
+              style={{
+                width: `${
+                  ((quizState.currentQuestionIndex + 1) / questions.length) *
+                  100
+                }%`,
+              }}
+            ></div>
+          </div>
+
+          <div className="py-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {questions[quizState.currentQuestionIndex].question_text}
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {questions[quizState.currentQuestionIndex].options.map((option) => (
+              <button
                 key={option.id}
-                className="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={() => handleAnswer(option.id)}
+                className="w-full text-left p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-500 dark:hover:border-orange-400 transition-colors"
               >
-                <RadioGroupItem
-                  value={option.id.toString()}
-                  id={`option-${option.id}`}
-                />
-                <Label htmlFor={`option-${option.id}`}>
+                <span className="font-medium text-gray-900 dark:text-white">
                   {option.option_text}
-                </Label>
-              </div>
+                </span>
+              </button>
             ))}
-          </RadioGroup>
-        </CardContent>
+          </div>
 
-        <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() =>
-              setQuizState((prev) => ({
-                ...prev,
-                currentQuestionIndex: prev.currentQuestionIndex - 1,
-                timeLeft: SECONDS_PER_QUESTION,
-              }))
-            }
-            disabled={quizState.currentQuestionIndex === 0}
-          >
-            Previous
-          </Button>
+          <div className="pt-4 flex justify-between">
+            <button
+              onClick={() =>
+                setQuizState((prev) => ({
+                  ...prev,
+                  currentQuestionIndex: prev.currentQuestionIndex - 1,
+                }))
+              }
+              disabled={quizState.currentQuestionIndex === 0}
+              className="text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              Previous
+            </button>
+            <button
+              onClick={handleNext}
+              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
+            >
+              {quizState.currentQuestionIndex === questions.length - 1
+                ? "Finish"
+                : "Next"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-8 max-w-2xl mx-auto space-y-8 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30">
+              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {Math.round(quizState.score)}% Score
+            </h2>
+            <p className="text-green-600 dark:text-green-400 font-medium">
+              {quizState.hasPassed
+                ? "Congratulations! You've passed the quiz."
+                : "You did not pass. Try again next time."}
+            </p>
+          </div>
 
-          <Button
-            onClick={handleNext}
-            disabled={!quizState.answers[currentQuestion.id]}
-          >
-            {quizState.currentQuestionIndex === questions.length - 1
-              ? "Finish"
-              : "Next"}
-          </Button>
-        </CardFooter>
-      </Card>
+          {quizState.hasPassed && (
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div>
+                  <h3 className="font-medium text-gray-900 dark:text-white">
+                    Access Granted
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    You can now contribute to the Kifuliiru dictionary.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-4">
+            <button
+              className="w-full bg-green-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-green-700 transform transition-all duration-200"
+              onClick={() => router.push("/contribute")}
+            >
+              Continue to Contributor Dashboard
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
