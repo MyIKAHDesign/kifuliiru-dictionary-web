@@ -1,257 +1,491 @@
 // app/quiz/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { LoadingScreen } from "./components/LoadingScreen";
-import { ErrorScreen } from "./components/ErrorScreen";
-import { WelcomeScreen } from "./components/WelcomeScreen";
-import { QuestionScreen } from "./components/QuestionScreen";
-import { ResultsScreen } from "./components/ResultsScreen";
-import { QUESTIONS, QUIZ_CONFIG } from "./lib/constants";
-import type {
-  UserProfile,
-  AnswerRecord,
-  QuestionFeedbackRecord,
-} from "./lib/types/quiz";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/app/components/ui/alert";
+import { Progress } from "@/app/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/app/components/ui/radio-group";
+import { Label } from "@/app/components/ui/label";
+import { Timer, CheckCircle, XCircle } from "lucide-react";
+
+interface QuizQuestion {
+  id: number;
+  question_text: string;
+  explanation: string;
+  quiz_type: string;
+  order_number: number;
+}
+
+interface QuizOption {
+  id: number;
+  question_id: number;
+  option_text: string;
+  is_correct: boolean;
+  option_order: number;
+}
+
+interface QuestionWithOptions extends QuizQuestion {
+  options: QuizOption[];
+}
+
+interface QuizState {
+  currentQuestionIndex: number;
+  answers: Record<string, number>; // question_id -> selected_option_id
+  timeLeft: number;
+  score: number;
+  hasPassed: boolean;
+  isComplete: boolean;
+  attemptId: string | null;
+}
+
+const SECONDS_PER_QUESTION = 45;
+const PASSING_SCORE = 70;
 
 export default function QuizPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  // Auth and Profile States
-  const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Quiz States
+  const [isLoading, setIsLoading] = useState(true);
+  const [, setError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
+  const [, setUserRole] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<AnswerRecord>({});
-  const [showResults, setShowResults] = useState(false);
-  const [hasPassedQuiz, setHasPassedQuiz] = useState(false);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState<number>(
-    QUIZ_CONFIG.TIME_PER_QUESTION
-  );
-  const [questionFeedback, setQuestionFeedback] =
-    useState<QuestionFeedbackRecord>({});
+  const [quizState, setQuizState] = useState<QuizState>({
+    currentQuestionIndex: 0,
+    answers: {},
+    timeLeft: SECONDS_PER_QUESTION,
+    score: 0,
+    hasPassed: false,
+    isComplete: false,
+    attemptId: null,
+  });
 
-  // Auth check effect
+  // Function to fetch questions with their options
+  const fetchQuestionsWithOptions = async () => {
+    // Fetch questions
+    const { data: questionsData, error: questionsError } = await supabase
+      .from("quiz_questions")
+      .select("*")
+      .eq("quiz_type", "contributor")
+      .order("order_number")
+      .limit(10);
+
+    if (questionsError) throw questionsError;
+
+    // Fetch options for all questions
+    const questionIds = questionsData.map((q) => q.id);
+    const { data: optionsData, error: optionsError } = await supabase
+      .from("quiz_options")
+      .select("*")
+      .in("question_id", questionIds)
+      .order("option_order");
+
+    if (optionsError) throw optionsError;
+
+    // Combine questions with their options
+    return questionsData.map((question: QuizQuestion) => ({
+      ...question,
+      options: optionsData.filter((opt) => opt.question_id === question.id),
+    }));
+  };
+
+  // Initialize quiz
   useEffect(() => {
-    async function checkAccess() {
+    async function initializeQuiz() {
       try {
         const {
           data: { session },
-          error: authError,
         } = await supabase.auth.getSession();
-
-        if (authError) throw authError;
-
         if (!session) {
-          router.push("/auth/sign-in?redirect_url=/quiz");
+          router.push("/auth/sign-in?redirect=/quiz");
           return;
         }
 
-        // Fetch user profile and role
+        // Check user role
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select(
-            "id, role, quiz_completed, quiz_score, quiz_attempts, last_quiz_attempt"
-          )
+          .select("role")
           .eq("id", session.user.id)
           .single();
 
         if (profileError) throw profileError;
+        setUserRole(profile?.role || "viewer");
 
-        if (!profile) {
-          throw new Error("Profile not found");
-        }
-
-        // Check role permissions
-        if (profile.role === "viewer") {
-          setUserProfile(profile);
-        } else if (["editor", "admin", "super_admin"].includes(profile.role)) {
+        if (profile?.role === "contributor") {
           router.push("/contribute");
           return;
-        } else {
-          throw new Error("Unauthorized: Insufficient permissions");
         }
 
-        // Check attempt limits
-        if (
-          profile.quiz_attempts >= QUIZ_CONFIG.MAX_DAILY_ATTEMPTS &&
-          profile.last_quiz_attempt
-        ) {
-          const lastAttempt = new Date(profile.last_quiz_attempt);
-          const now = new Date();
-          if (now.getTime() - lastAttempt.getTime() < 24 * 60 * 60 * 1000) {
-            throw new Error(
-              "Maximum quiz attempts reached for today. Please try again tomorrow."
-            );
-          }
-        }
+        const questionsWithOptions = await fetchQuestionsWithOptions();
+        setQuestions(questionsWithOptions);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "An error occurred";
-        setError(errorMessage);
+        setError(err instanceof Error ? err.message : "Failed to load quiz");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
 
-    checkAccess();
-  }, [router, supabase]);
+    initializeQuiz();
+  }, [supabase, router]);
 
   // Timer effect
   useEffect(() => {
-    if (!hasStarted || timeLeft <= 0 || showResults) return;
+    if (hasStarted && !quizState.isComplete && !isLoading) {
+      const timer = setInterval(() => {
+        setQuizState((prev) => {
+          if (prev.timeLeft <= 1) {
+            handleTimeUp();
+            return { ...prev, timeLeft: 0 };
+          }
+          return { ...prev, timeLeft: prev.timeLeft - 1 };
+        });
+      }, 1000);
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleTimeUp();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hasStarted, quizState.isComplete, isLoading]);
 
-    return () => clearInterval(timer);
-  }, [timeLeft, showResults, hasStarted]);
+  // Start new quiz attempt
+  const startNewAttempt = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error("No authenticated user");
 
-  // Quiz handlers
+    const { data: attempt, error } = await supabase
+      .from("quiz_attempts")
+      .insert({
+        user_id: session.user.id,
+        quiz_type: "contributor",
+        started_at: new Date().toISOString(),
+        current_question: 0,
+        score: 0,
+        total_questions: questions.length,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return attempt.id;
+  };
+
   const handleTimeUp = () => {
-    if (!answers[currentQuestion]) {
-      setAnswers((prev) => ({ ...prev, [currentQuestion]: -1 }));
+    const currentQuestion = questions[quizState.currentQuestionIndex];
+    if (!quizState.answers[currentQuestion.id]) {
+      handleAnswer("-1");
       handleNext();
     }
   };
 
-  const handleAnswer = (answer: string) => {
-    setAnswers((prev) => ({
+  const handleAnswer = async (optionId: string) => {
+    const currentQuestion = questions[quizState.currentQuestionIndex];
+    const selectedOption = currentQuestion.options.find(
+      (opt) => opt.id.toString() === optionId
+    );
+
+    // Record response
+    if (quizState.attemptId) {
+      await supabase.from("quiz_responses").insert({
+        attempt_id: quizState.attemptId,
+        question_id: currentQuestion.id,
+        selected_option_id: selectedOption?.id || null,
+        is_correct: selectedOption?.is_correct || false,
+        time_spent: SECONDS_PER_QUESTION - quizState.timeLeft,
+        response_order: quizState.currentQuestionIndex,
+      });
+    }
+
+    setQuizState((prev) => ({
       ...prev,
-      [currentQuestion]: parseInt(answer),
+      answers: {
+        ...prev.answers,
+        [currentQuestion.id]: selectedOption?.id || -1,
+      },
     }));
   };
 
-  const handleNext = () => {
-    if (currentQuestion < QUESTIONS.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
-      setTimeLeft(QUIZ_CONFIG.TIME_PER_QUESTION);
+  const calculateScore = async (): Promise<number> => {
+    if (!quizState.attemptId) return 0;
+
+    const { data: responses } = await supabase
+      .from("quiz_responses")
+      .select("is_correct")
+      .eq("attempt_id", quizState.attemptId);
+
+    if (!responses) return 0;
+
+    const correctAnswers = responses.filter((r) => r.is_correct).length;
+    return (correctAnswers / questions.length) * 100;
+  };
+
+  const handleNext = async () => {
+    if (quizState.currentQuestionIndex < questions.length - 1) {
+      setQuizState((prev) => ({
+        ...prev,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+        timeLeft: SECONDS_PER_QUESTION,
+      }));
+
+      // Update progress
+      if (quizState.attemptId) {
+        await supabase.from("quiz_progress").upsert({
+          id: quizState.attemptId,
+          current_question: quizState.currentQuestionIndex + 1,
+          time_left: SECONDS_PER_QUESTION,
+        });
+      }
     } else {
-      calculateResults();
+      await completeQuiz();
     }
   };
 
-  const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion((prev) => prev - 1);
-      setTimeLeft(QUIZ_CONFIG.TIME_PER_QUESTION);
-    }
-  };
-
-  const handleRetry = () => {
-    setCurrentQuestion(0);
-    setAnswers({});
-    setShowResults(false);
-    setHasPassedQuiz(false);
-    setScore(0);
-    setTimeLeft(QUIZ_CONFIG.TIME_PER_QUESTION);
-    setQuestionFeedback({});
-  };
-
-  const calculateResults = async () => {
-    if (!userProfile) return;
-
-    const results: QuestionFeedbackRecord = {};
-    let correctCount = 0;
-
-    QUESTIONS.forEach((question, index) => {
-      const isCorrect = answers[index] === question.correct;
-      if (isCorrect) correctCount++;
-
-      results[index] = {
-        isCorrect,
-        userAnswer: answers[index],
-        correctAnswer: question.correct,
-        explanation: question.explanation,
-      };
-    });
-
-    const finalScore = (correctCount / QUESTIONS.length) * 100;
-    const passed = finalScore >= QUIZ_CONFIG.PASS_THRESHOLD;
-
+  const completeQuiz = async () => {
     try {
-      const { error: updateError } = await supabase
-        .from("profiles")
+      if (!quizState.attemptId) return;
+
+      const score = await calculateScore();
+      const passed = score >= PASSING_SCORE;
+
+      // Update attempt
+      await supabase
+        .from("quiz_attempts")
         .update({
-          quiz_completed: passed,
-          quiz_score: finalScore,
-          quiz_attempts: (userProfile.quiz_attempts || 0) + 1,
-          last_quiz_attempt: new Date().toISOString(),
-          role: passed ? "editor" : "viewer",
+          completed_at: new Date().toISOString(),
+          score,
         })
-        .eq("id", userProfile.id);
+        .eq("id", quizState.attemptId);
 
-      if (updateError) throw updateError;
+      // If passed, update user role
+      if (passed) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          await supabase
+            .from("profiles")
+            .update({
+              role: "contributor",
+              quiz_completed: true,
+              quiz_score: score,
+              quiz_completed_at: new Date().toISOString(),
+            })
+            .eq("id", session.user.id);
+        }
+      }
 
-      setScore(finalScore);
-      setHasPassedQuiz(passed);
-      setQuestionFeedback(results);
-      setShowResults(true);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      setQuizState((prev) => ({
+        ...prev,
+        score,
+        hasPassed: passed,
+        isComplete: true,
+      }));
     } catch (err) {
-      // Using underscore to indicate we're intentionally not using the error
-      setError("Failed to save quiz results. Please try again.");
+      console.error("Error completing quiz:", err);
+      setError("Failed to complete quiz. Please try again.");
     }
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  const handleStartQuiz = async () => {
+    try {
+      const attemptId = await startNewAttempt();
+      setQuizState((prev) => ({ ...prev, attemptId }));
+      setHasStarted(true);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to start quiz. Please try again.";
 
-  if (error) {
-    return <ErrorScreen message={error} onRetry={() => router.push("/")} />;
+      setError(errorMessage);
+      console.error("Error starting quiz:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   if (!hasStarted) {
     return (
-      <WelcomeScreen
-        questionsCount={QUESTIONS.length}
-        onStart={() => setHasStarted(true)}
-      />
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle>Contributor Quiz</CardTitle>
+            <CardDescription>
+              Pass this quiz to become a contributor and help build the
+              Kifuliiru dictionary.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-medium mb-2">Quiz Details:</h3>
+              <ul className="space-y-2 list-disc list-inside text-sm">
+                <li>{questions.length} questions to answer</li>
+                <li>{SECONDS_PER_QUESTION} seconds per question</li>
+                <li>{PASSING_SCORE}% required to pass</li>
+                <li>
+                  You&apos;ll become a contributor immediately upon passing
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleStartQuiz} className="w-full">
+              Start Quiz
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
     );
   }
 
-  if (showResults) {
+  if (quizState.isComplete) {
     return (
-      <ResultsScreen
-        score={score}
-        hasPassedQuiz={hasPassedQuiz}
-        questions={QUESTIONS}
-        answers={answers}
-        questionFeedback={questionFeedback}
-        onRetry={handleRetry}
-        onReset={() => {
-          setHasStarted(false);
-          handleRetry();
-        }}
-      />
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-center">Quiz Results</CardTitle>
+            <CardDescription className="text-center text-xl">
+              Your Score: {Math.round(quizState.score)}%
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Progress value={quizState.score} className="w-full h-2" />
+
+            {quizState.hasPassed ? (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Congratulations!</AlertTitle>
+                <AlertDescription>
+                  You are now a contributor! You can start adding entries to the
+                  Kifuliiru dictionary.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>Not Quite There</AlertTitle>
+                <AlertDescription>
+                  You need {PASSING_SCORE}% to pass. Feel free to try again when
+                  you&apos;re ready.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            {quizState.hasPassed ? (
+              <Button
+                onClick={() => router.push("/contribute")}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Start Contributing
+              </Button>
+            ) : (
+              <Button onClick={() => router.push("/")} variant="outline">
+                Return Home
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
     );
   }
+
+  const currentQuestion = questions[quizState.currentQuestionIndex];
 
   return (
-    <QuestionScreen
-      question={QUESTIONS[currentQuestion]}
-      questionNumber={currentQuestion + 1}
-      totalQuestions={QUESTIONS.length}
-      timeLeft={timeLeft}
-      selectedAnswer={answers[currentQuestion]}
-      onAnswer={handleAnswer}
-      onNext={handleNext}
-      onPrevious={handlePrevious}
-    />
+    <div className="container mx-auto px-4 py-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <div className="flex justify-between items-center mb-4">
+            <CardTitle>
+              Question {quizState.currentQuestionIndex + 1} of{" "}
+              {questions.length}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Timer className="h-4 w-4" />
+              <span
+                className={`font-mono ${
+                  quizState.timeLeft <= 10 ? "text-red-500" : ""
+                }`}
+              >
+                {quizState.timeLeft}s
+              </span>
+            </div>
+          </div>
+          <Progress
+            value={(quizState.currentQuestionIndex / questions.length) * 100}
+            className="w-full h-2"
+          />
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <h3 className="text-lg font-medium">
+            {currentQuestion.question_text}
+          </h3>
+
+          <RadioGroup
+            value={quizState.answers[currentQuestion.id]?.toString()}
+            onValueChange={handleAnswer}
+            className="space-y-3"
+          >
+            {currentQuestion.options.map((option) => (
+              <div
+                key={option.id}
+                className="flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <RadioGroupItem
+                  value={option.id.toString()}
+                  id={`option-${option.id}`}
+                />
+                <Label htmlFor={`option-${option.id}`}>
+                  {option.option_text}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </CardContent>
+
+        <CardFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setQuizState((prev) => ({
+                ...prev,
+                currentQuestionIndex: prev.currentQuestionIndex - 1,
+                timeLeft: SECONDS_PER_QUESTION,
+              }))
+            }
+            disabled={quizState.currentQuestionIndex === 0}
+          >
+            Previous
+          </Button>
+
+          <Button
+            onClick={handleNext}
+            disabled={!quizState.answers[currentQuestion.id]}
+          >
+            {quizState.currentQuestionIndex === questions.length - 1
+              ? "Finish"
+              : "Next"}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
