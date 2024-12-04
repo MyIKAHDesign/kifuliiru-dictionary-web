@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { BookOpen, Clock, CheckCircle2, HelpCircle, Timer } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  HelpCircle,
+  Timer,
+} from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Progress } from "@/app/components/ui/progress";
 
 interface QuizQuestion {
   id: number;
@@ -58,7 +67,6 @@ export default function QuizPage() {
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        // Fetch questions from the database
         const { data: questionsData, error: questionsError } = await supabase
           .from("quiz_questions")
           .select("*")
@@ -68,7 +76,6 @@ export default function QuizPage() {
 
         if (questionsError) throw questionsError;
 
-        // Fetch options for all questions
         const questionIds = questionsData.map((q) => q.id);
         const { data: optionsData, error: optionsError } = await supabase
           .from("quiz_options")
@@ -78,7 +85,6 @@ export default function QuizPage() {
 
         if (optionsError) throw optionsError;
 
-        // Combine questions with their options
         const questionsWithOptions = questionsData.map((question) => ({
           ...question,
           options: optionsData.filter(
@@ -96,6 +102,22 @@ export default function QuizPage() {
 
     fetchQuestions();
   }, [supabase]);
+
+  useEffect(() => {
+    if (hasStarted && !quizState.isComplete) {
+      const timer = setInterval(() => {
+        setQuizState((prev) => {
+          if (prev.timeLeft <= 1) {
+            handleNext();
+            return { ...prev, timeLeft: SECONDS_PER_QUESTION };
+          }
+          return { ...prev, timeLeft: prev.timeLeft - 1 };
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [hasStarted, quizState.isComplete]);
 
   const handleStartQuiz = () => {
     setHasStarted(true);
@@ -150,139 +172,137 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
       {!hasStarted ? (
-        <div className="max-w-2xl mx-auto space-y-8 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
-          <div className="text-center space-y-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
+          <div className="max-w-xl space-y-8 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Kifuliiru Contributor Quiz
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Complete this quiz to gain contributor access to the Kifuliiru
-              Dictionary.
+              This quiz is your first step to becoming a contributor to the
+              Kifuliiru Dictionary. It tests your understanding of the project’s
+              goals and ensures you are ready to help preserve the language.
+              Answer all the questions to proceed.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg flex items-start space-x-3">
-              <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  {questions.length} Questions
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Multiple choice format
-                </p>
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    10 Questions
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    The quiz consists of 10 multiple-choice questions carefully
+                    designed to test your knowledge about the Kifuliiru
+                    Dictionary project.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    45 Seconds Per Question
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Each question has a time limit of 45 seconds to ensure quick
+                    and decisive responses. Be prepared before starting the
+                    quiz.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    70% Passing Score
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    A minimum score of 70% is required to pass. Passing the quiz
+                    demonstrates your readiness to contribute effectively to the
+                    Kifuliiru Dictionary.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+                <HelpCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Review Guidelines
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Before starting the quiz, take a moment to review the
+                    guidelines and objectives of the project. This will help you
+                    better understand the role of a contributor.
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-start space-x-3">
-              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  {SECONDS_PER_QUESTION} Seconds
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Per question time limit
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-start space-x-3">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  {PASSING_SCORE}% to Pass
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Required score threshold
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg flex items-start space-x-3">
-              <HelpCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  Need Help?
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Review guidelines before starting
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
             <button
               onClick={handleStartQuiz}
-              className="w-full bg-orange-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-orange-700 transform transition-all duration-200"
+              className="w-full bg-orange-600 text-white rounded-lg py-3 font-medium hover:bg-orange-700 transition-all"
             >
               Start Quiz
+              <ArrowRight className="w-5 h-5 inline-block ml-2" />
             </button>
           </div>
         </div>
       ) : !quizState.isComplete ? (
-        <div className="mt-8 max-w-2xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+        <div className="max-w-xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               Question {quizState.currentQuestionIndex + 1} of{" "}
               {questions.length}
-            </div>
+            </span>
             <div className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
               <Timer className="w-5 h-5" />
               <span className="font-mono">{quizState.timeLeft}s</span>
             </div>
           </div>
-
-          <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full">
-            <div
-              className="bg-orange-600 h-2 rounded-full"
-              style={{
-                width: `${
-                  ((quizState.currentQuestionIndex + 1) / questions.length) *
-                  100
-                }%`,
-              }}
-            ></div>
-          </div>
-
-          <div className="py-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {questions[quizState.currentQuestionIndex].question_text}
-            </h2>
-          </div>
-
+          <Progress
+            value={
+              ((quizState.currentQuestionIndex + 1) / questions.length) * 100
+            }
+            className="h-2 rounded-full bg-gray-200 dark:bg-gray-700"
+          />
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+            {questions[quizState.currentQuestionIndex].question_text}
+          </h2>
           <div className="space-y-3">
             {questions[quizState.currentQuestionIndex].options.map((option) => (
               <button
                 key={option.id}
                 onClick={() => handleAnswer(option.id)}
-                className="w-full text-left p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-500 dark:hover:border-orange-400 transition-colors"
+                className={`w-full p-4 rounded-lg border-2 transition-colors ${
+                  quizState.answers[
+                    questions[quizState.currentQuestionIndex].id
+                  ] === option.id
+                    ? "border-orange-600 bg-orange-100"
+                    : "border-gray-200 dark:border-gray-700 hover:border-orange-500"
+                }`}
               >
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {option.option_text}
-                </span>
+                {option.option_text}
               </button>
             ))}
           </div>
-
-          <div className="pt-4 flex justify-between">
+          <div className="flex justify-between">
             <button
+              disabled={quizState.currentQuestionIndex === 0}
               onClick={() =>
                 setQuizState((prev) => ({
                   ...prev,
                   currentQuestionIndex: prev.currentQuestionIndex - 1,
+                  timeLeft: SECONDS_PER_QUESTION,
                 }))
               }
-              disabled={quizState.currentQuestionIndex === 0}
-              className="text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="text-gray-600 dark:text-gray-400"
             >
               Previous
             </button>
             <button
               onClick={handleNext}
-              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
+              className="bg-orange-600 text-white px-4 py-2 rounded-lg"
             >
               {quizState.currentQuestionIndex === questions.length - 1
                 ? "Finish"
@@ -291,45 +311,65 @@ export default function QuizPage() {
           </div>
         </div>
       ) : (
-        <div className="mt-8 max-w-2xl mx-auto space-y-8 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30">
-              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {Math.round(quizState.score)}% Score
-            </h2>
-            <p className="text-green-600 dark:text-green-400 font-medium">
-              {quizState.hasPassed
-                ? "Congratulations! You've passed the quiz."
-                : "You did not pass. Try again next time."}
-            </p>
-          </div>
-
-          {quizState.hasPassed && (
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    Access Granted
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    You can now contribute to the Kifuliiru dictionary.
+        <div className="max-w-xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
+            {quizState.hasPassed ? "Congratulations!" : "Quiz Complete"}
+          </h2>
+          <p className="text-center text-gray-600 dark:text-gray-300">
+            {quizState.hasPassed
+              ? `You passed with a score of ${Math.round(quizState.score)}%!`
+              : `You scored ${Math.round(
+                  quizState.score
+                )}%. Better luck next time!`}
+          </p>
+          <div className="space-y-4">
+            {questions.map((question, index) => (
+              <div
+                key={question.id}
+                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+              >
+                <h3 className="font-medium text-gray-900 dark:text-white">
+                  {index + 1}. {question.question_text}
+                </h3>
+                <p
+                  className={`text-sm ${
+                    question.options.some(
+                      (opt) =>
+                        opt.is_correct &&
+                        opt.id === quizState.answers[question.id]
+                    )
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  Your Answer:{" "}
+                  {
+                    question.options.find(
+                      (opt) => opt.id === quizState.answers[question.id]
+                    )?.option_text
+                  }
+                </p>
+                {!question.options.some(
+                  (opt) =>
+                    opt.is_correct && opt.id === quizState.answers[question.id]
+                ) && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Correct Answer:{" "}
+                    {
+                      question.options.find((opt) => opt.is_correct)
+                        ?.option_text
+                    }
                   </p>
-                </div>
+                )}
               </div>
-            </div>
-          )}
-
-          <div className="pt-4">
-            <button
-              className="w-full bg-green-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-green-700 transform transition-all duration-200"
-              onClick={() => router.push("/contribute")}
-            >
-              Continue to Contributor Dashboard
-            </button>
+            ))}
           </div>
+          <button
+            className="w-full bg-orange-600 text-white rounded-lg py-3"
+            onClick={() => router.push("/contribute")}
+          >
+            Go to Dashboard
+          </button>
         </div>
       )}
     </div>
