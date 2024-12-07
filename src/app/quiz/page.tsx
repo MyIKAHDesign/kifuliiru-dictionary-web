@@ -11,8 +11,16 @@ import {
   HelpCircle,
   Timer,
 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
 import { Progress } from "@/app/components/ui/progress";
+import {
+  calculateQuizScore,
+  completeQuizAttempt,
+  createQuizAttempt,
+  createQuizProgressHandler,
+  saveQuizProgress,
+  saveQuizResponse,
+} from "../lib/quiz-progress-handlers";
+import { createQuizHandler } from "../lib/quiz-response-handlers";
 
 interface QuizQuestion {
   id: number;
@@ -50,6 +58,9 @@ const PASSING_SCORE = 70;
 export default function QuizPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
+  // Initialize handlers first
+  const quizResponseHandler = createQuizHandler(supabase);
+  const quizProgressHandler = createQuizProgressHandler(supabase);
 
   const [isLoading, setIsLoading] = useState(true);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
@@ -119,48 +130,155 @@ export default function QuizPage() {
     }
   }, [hasStarted, quizState.isComplete]);
 
-  const handleStartQuiz = () => {
-    setHasStarted(true);
-  };
+  const handleStartQuiz = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth/sign-in?redirect=/quiz");
+        return;
+      }
 
-  const handleAnswer = (selectedOptionId: number) => {
-    const currentQuestion = questions[quizState.currentQuestionIndex];
-    setQuizState((prev) => ({
-      ...prev,
-      answers: {
-        ...prev.answers,
-        [currentQuestion.id]: selectedOptionId,
-      },
-    }));
-  };
+      const attemptId = await createQuizAttempt(
+        supabase,
+        user.id,
+        questions.length
+      );
 
-  const handleNext = () => {
-    if (quizState.currentQuestionIndex < questions.length - 1) {
       setQuizState((prev) => ({
         ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
+        attemptId,
         timeLeft: SECONDS_PER_QUESTION,
       }));
-    } else {
-      completeQuiz();
+      setHasStarted(true);
+    } catch (error) {
+      console.error("Error starting quiz:", error);
+      // You might want to show an error message to the user here
     }
   };
 
-  const completeQuiz = () => {
-    const correctAnswers = questions.filter((q) =>
-      q.options.some(
-        (opt) => opt.is_correct && opt.id === quizState.answers[q.id]
-      )
-    ).length;
+  const handleAnswer = async (selectedOptionId: number) => {
+    try {
+      const currentQuestion = questions[quizState.currentQuestionIndex];
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    const score = (correctAnswers / questions.length) * 100;
+      if (!quizState.attemptId || !user) return;
 
-    setQuizState((prev) => ({
-      ...prev,
-      score,
-      hasPassed: score >= PASSING_SCORE,
-      isComplete: true,
-    }));
+      // Update local state
+      setQuizState((prev) => ({
+        ...prev,
+        answers: {
+          ...prev.answers,
+          [currentQuestion.id]: selectedOptionId,
+        },
+      }));
+
+      const isCorrect =
+        currentQuestion.options.find((opt) => opt.id === selectedOptionId)
+          ?.is_correct || false;
+
+      // Save response
+      await saveQuizResponse(supabase, {
+        attemptId: quizState.attemptId,
+        questionId: currentQuestion.id,
+        selectedOptionId,
+        isCorrect,
+        timeSpent: SECONDS_PER_QUESTION - quizState.timeLeft,
+        responseOrder: quizState.currentQuestionIndex,
+        userId: user.id,
+      });
+
+      // Save progress
+      await saveQuizProgress(supabase, {
+        attempt_id: quizState.attemptId,
+        user_id: user.id,
+        current_question: quizState.currentQuestionIndex,
+        answers: {
+          ...quizState.answers,
+          [currentQuestion.id]: selectedOptionId,
+        },
+        time_left: quizState.timeLeft,
+      });
+    } catch (error) {
+      console.error("Error saving answer:", error);
+    }
+  };
+
+  const handleNext = async () => {
+    try {
+      if (!quizState.attemptId) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await saveQuizProgress(supabase, {
+        attempt_id: quizState.attemptId,
+        user_id: user.id,
+        current_question: quizState.currentQuestionIndex,
+        answers: quizState.answers,
+        time_left: quizState.timeLeft,
+      });
+
+      if (quizState.currentQuestionIndex < questions.length - 1) {
+        setQuizState((prev) => ({
+          ...prev,
+          currentQuestionIndex: prev.currentQuestionIndex + 1,
+          timeLeft: SECONDS_PER_QUESTION,
+        }));
+      } else {
+        await completeQuiz();
+      }
+    } catch (error) {
+      console.error("Error in handleNext:", error);
+    }
+  };
+
+  const completeQuiz = async () => {
+    try {
+      if (!quizState.attemptId) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("No authenticated user found");
+        return;
+      }
+
+      // Calculate final score
+      const score = await calculateQuizScore(supabase, quizState.attemptId);
+
+      // Complete the attempt and update user role if passed
+      await completeQuizAttempt(supabase, {
+        attemptId: quizState.attemptId,
+        score,
+        totalQuestions: questions.length,
+        userId: user.id,
+        passingScore: PASSING_SCORE, // Pass the constant
+      });
+
+      // Update local state with results
+      setQuizState((prev) => ({
+        ...prev,
+        score,
+        hasPassed: score >= PASSING_SCORE,
+        isComplete: true,
+      }));
+
+      // If passed, redirect after showing results
+      if (score >= PASSING_SCORE) {
+        setTimeout(() => {
+          router.push("/contribute");
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error completing quiz:", error);
+    }
   };
 
   if (isLoading) {
@@ -315,13 +433,22 @@ export default function QuizPage() {
           <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
             {quizState.hasPassed ? "Congratulations!" : "Quiz Complete"}
           </h2>
+
+          <div className="text-center">
+            <div className="text-6xl font-bold mb-4">
+              {Math.round(quizState.score)}%
+            </div>
+            <Progress value={quizState.score} className="w-full h-2" />
+          </div>
+
           <p className="text-center text-gray-600 dark:text-gray-300">
             {quizState.hasPassed
               ? `You passed with a score of ${Math.round(quizState.score)}%!`
               : `You scored ${Math.round(
                   quizState.score
-                )}%. Better luck next time!`}
+                )}%. You need ${PASSING_SCORE}% to pass. Better luck next time!`}
           </p>
+
           <div className="space-y-4">
             {questions.map((question, index) => (
               <div
@@ -364,12 +491,25 @@ export default function QuizPage() {
               </div>
             ))}
           </div>
-          <button
-            className="w-full bg-orange-600 text-white rounded-lg py-3"
-            onClick={() => router.push("/contribute")}
-          >
-            Go to Dashboard
-          </button>
+
+          <div className="flex justify-center pt-6">
+            <button
+              className={`w-full py-3 px-6 rounded-lg font-medium transition-colors duration-200 ${
+                quizState.hasPassed
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "bg-orange-600 hover:bg-orange-700 text-white"
+              }`}
+              onClick={() =>
+                quizState.hasPassed
+                  ? router.push("/contribute")
+                  : router.push("/")
+              }
+            >
+              {quizState.hasPassed
+                ? "Go to Contributor Dashboard"
+                : "Return Home"}
+            </button>
+          </div>
         </div>
       )}
     </div>
