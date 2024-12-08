@@ -14,6 +14,53 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      magambo: {
+        Row: {
+          id: string;
+          igambo: string;
+          kifuliiru: string;
+          kiswahili: string;
+          kifaransa: string;
+          kingereza: string;
+          igambo_audio_url: string | null;
+          kifuliiru_definition_audio_url: string | null;
+          status: string;
+          nayemera_consent: boolean;
+          owner_id: string;
+          created_date: string;
+          updated_date?: string;
+        };
+        Insert: {
+          id?: string;
+          igambo: string;
+          kifuliiru: string;
+          kiswahili: string;
+          kifaransa: string;
+          kingereza: string;
+          igambo_audio_url?: string | null;
+          kifuliiru_definition_audio_url?: string | null;
+          status: string;
+          nayemera_consent: boolean;
+          owner_id: string;
+          created_date: string;
+          updated_date?: string;
+        };
+        Update: {
+          id?: string;
+          igambo?: string;
+          kifuliiru?: string;
+          kiswahili?: string;
+          kifaransa?: string;
+          kingereza?: string;
+          igambo_audio_url?: string | null;
+          kifuliiru_definition_audio_url?: string | null;
+          status?: string;
+          nayemera_consent?: boolean;
+          owner_id?: string;
+          created_date?: string;
+          updated_date?: string;
+        };
+      };
       quiz_progress: {
         Row: {
           id: string;
