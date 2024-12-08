@@ -57,8 +57,6 @@ const QuizManagement: React.FC = () => {
 
   return (
     <div className="p-6" id="quiz-management">
-      <h2 className="text-2xl font-semibold mb-4">Quiz Management</h2>
-
       {/* Quiz List View */}
       {activeView === "list" && (
         <>

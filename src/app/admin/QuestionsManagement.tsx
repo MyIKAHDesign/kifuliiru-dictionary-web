@@ -233,7 +233,6 @@ const QuestionsManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Questions Management</h2>
       {loading && <p>Loading questions...</p>}
       {error && <p className="text-red-500">{error}</p>}
       {!loading && !error && (

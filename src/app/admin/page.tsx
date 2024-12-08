@@ -203,7 +203,7 @@ const AdminDashboard: React.FC = () => {
     { id: "numbers", label: "Number System", icon: Hash },
     { id: "users", label: "User Management", icon: Users },
     { id: "quiz-management", label: "Quiz Management", icon: Check }, // New item
-    { id: "questions", label: "Questions", icon: Check }, // New section for Questions
+    { id: "questions", label: "Questions Management", icon: Check }, // New section for Questions
   ];
 
   const stats: Stat[] = [
