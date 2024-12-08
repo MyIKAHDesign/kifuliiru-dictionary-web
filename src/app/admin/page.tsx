@@ -200,7 +200,7 @@ const AdminDashboard: React.FC = () => {
   const sidebarItems = [
     { id: "overview", label: "Overview", icon: Settings },
     { id: "dictionary", label: "Dictionary Entries", icon: Book },
-    { id: "numbers", label: "Number System", icon: Hash },
+    { id: "numbers", label: "Numbers Management", icon: Hash },
     { id: "users", label: "User Management", icon: Users },
     { id: "quiz-management", label: "Quiz Management", icon: Check }, // New item
     { id: "questions", label: "Questions Management", icon: Check }, // New section for Questions

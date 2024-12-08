@@ -127,8 +127,6 @@ const NumbersManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Number System Management</h2>
-
       {/* Form for adding/updating numbers */}
       <div className="p-6 bg-white shadow rounded-lg mb-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
