@@ -1,6 +1,7 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Globe2,
   Users,
@@ -24,8 +25,13 @@ import {
 
 export default function UnauthorizedPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const context = searchParams.get("context");
+  const [context, setContext] = useState<string | null>(null);
+
+  // Retrieve the search parameter on the client side
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setContext(searchParams.get("context"));
+  }, []);
 
   const benefits = [
     {
@@ -155,6 +161,7 @@ export default function UnauthorizedPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Contributor Card */}
             <Card className="relative group overflow-hidden border-2 transition-all hover:border-orange-500/50 dark:hover:border-orange-400/50">
               <CardHeader>
                 <CardTitle className="text-2xl bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600">
@@ -197,6 +204,7 @@ export default function UnauthorizedPage() {
               </CardContent>
             </Card>
 
+            {/* Viewer Card */}
             <Card className="relative group overflow-hidden border-2 transition-all hover:border-gray-500/50 dark:hover:border-gray-400/50">
               <CardHeader>
                 <CardTitle className="text-2xl text-gray-900 dark:text-gray-100">
