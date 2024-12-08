@@ -287,6 +287,51 @@ const AboutPage: React.FC = () => {
           </div>
         </div>
       </section>
+      {/* Kifuliiru Language Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <SectionTitle>The Kifuliiru Language and People</SectionTitle>
+            <div className="space-y-6 text-gray-600 dark:text-gray-300">
+              <p>
+                The Kifuliiru language is a Bantu language spoken primarily by
+                the Bafuliiru people in the Uvira region of Eastern Congo
+                (Democratic Republic of Congo). It is more than just a mode of
+                communication; it is a living repository of the culture,
+                history, and traditions of the Bafuliiru community.
+              </p>
+              <p>
+                The language is deeply tied to the identity of the Bafuliiru
+                people, who inhabit a region of stunning natural beauty, marked
+                by lush hills, rivers, and fertile agricultural lands. The
+                Bafuliiru are known for their rich cultural heritage,
+                traditional farming practices, and a strong sense of community.
+              </p>
+              <p>
+                Kifuliiru plays a crucial role in daily life, education, and
+                storytelling. Oral traditions, proverbs, and songs in Kifuliiru
+                have been passed down through generations, serving as a bridge
+                between the past and the present. Despite its richness, the
+                language faces challenges from urbanization and the dominance of
+                other regional languages like Kiswahili and French.
+              </p>
+              <p>
+                Through our projects, we aim to preserve this invaluable aspect
+                of Bafuliiru heritage. By documenting, teaching, and sharing
+                Kifuliiru, we ensure that it remains vibrant for future
+                generations while also making it accessible to the global
+                community.
+              </p>
+              <p>
+                The Kifuliiru-speaking region is a vital cultural hub in the
+                eastern DRC, showcasing the resilience and creativity of its
+                people. We invite you to learn more, participate, and join us in
+                celebrating this incredible language and its speakers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Future Vision Section */}
       <section className="py-16">
