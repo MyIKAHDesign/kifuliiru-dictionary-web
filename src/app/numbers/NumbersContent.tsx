@@ -94,23 +94,31 @@ export default function NumbersContent({
               <DropdownMenuTrigger asChild>
                 <button
                   className="flex items-center gap-2 px-4 py-3 border rounded-lg 
-                                bg-white/80 dark:bg-gray-800/50 
-                                border-gray-200 dark:border-gray-700/50
-                                text-gray-700 dark:text-gray-300
-                                hover:bg-gray-50 dark:hover:bg-gray-700/50
-                                transition-colors backdrop-blur-sm"
+                 bg-white/70 dark:bg-gray-800/50 
+                 border-gray-200 dark:border-gray-700/50
+                 text-gray-700 dark:text-gray-300
+                 hover:bg-gray-50 dark:hover:bg-gray-700/50
+                 transition-colors backdrop-blur-md shadow-md"
                 >
                   <Globe2 className="h-5 w-5" />
                   <span>{languageLabels[displayLanguage]}</span>
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="backdrop-blur-md">
+              <DropdownMenuContent
+                align="end"
+                className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-gray-200 
+               dark:border-gray-700 rounded-lg shadow-lg p-2"
+              >
                 {Object.entries(languageLabels).map(([key, label]) => (
                   <DropdownMenuItem
                     key={key}
                     onClick={() => setDisplayLanguage(key as LanguageOption)}
-                    className="hover:bg-orange-50 dark:hover:bg-orange-950/50"
+                    className={`cursor-pointer px-4 py-2 rounded-md transition-colors ${
+                      displayLanguage === key
+                        ? "text-orange-600 font-bold"
+                        : "hover:bg-orange-50 dark:hover:bg-orange-950/50"
+                    }`}
                   >
                     {label}
                   </DropdownMenuItem>
