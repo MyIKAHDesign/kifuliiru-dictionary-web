@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // Import usePathname
 import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/auth-helpers-nextjs";
@@ -20,30 +21,15 @@ import {
   Users,
   Sun,
   Moon,
-  ChevronDown,
   ArrowRight,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-
-type Language = "en" | "fr" | "sw" | "kf";
-
-const languages: Record<Language, string> = {
-  kf: "Kifuliiru",
-  sw: "Kiswahili",
-  en: "English",
-  fr: "Français",
-};
+import LanguageSelector from "./LanguageSelector";
 
 export function Header() {
+  const pathname = usePathname(); // Get current path
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [isDark, setIsDark] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState<Language>("kf");
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -107,35 +93,6 @@ export function Header() {
     { name: "About Us", icon: Grid, path: "/about" },
   ];
 
-  const LanguageSelector = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2">
-          <Globe className="h-4 w-4" />
-          <span>{languages[currentLanguage]}</span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {(Object.entries(languages) as [Language, string][]).map(
-          ([code, name]) => (
-            <DropdownMenuItem
-              key={code}
-              onClick={() => setCurrentLanguage(code)}
-              className={`${
-                currentLanguage === code
-                  ? "text-orange-600 dark:text-orange-400"
-                  : ""
-              } cursor-pointer`}
-            >
-              {name}
-            </DropdownMenuItem>
-          )
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
   return (
     <>
       <DevelopmentBanner />
@@ -158,9 +115,11 @@ export function Header() {
                 <Link
                   key={link.path}
                   href={link.path}
-                  className="text-sm font-medium text-gray-700 hover:text-orange-600 
-                           dark:text-gray-300 dark:hover:text-orange-400 
-                           transition-colors flex items-center gap-2 group"
+                  className={`text-sm font-medium flex items-center gap-2 group transition-colors ${
+                    pathname === link.path
+                      ? "text-orange-600 dark:text-orange-400"
+                      : "text-gray-700 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400"
+                  }`}
                 >
                   <link.icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                   <span>{link.name}</span>
@@ -218,59 +177,6 @@ export function Header() {
               )}
             </button>
           </div>
-
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden py-4">
-              <nav className="flex flex-col space-y-4">
-                {getNavigationLinks().map((link) => (
-                  <Link
-                    key={link.path}
-                    href={link.path}
-                    className="text-sm font-medium text-gray-700 hover:text-orange-600 
-                             dark:text-gray-300 dark:hover:text-orange-400 
-                             transition-colors px-4 py-2 hover:bg-gray-50 
-                             dark:hover:bg-gray-800 rounded-md flex items-center gap-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.name}
-                  </Link>
-                ))}
-
-                <div className="px-4 py-2">
-                  <button
-                    onClick={toggleTheme}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm 
-                             text-gray-700 dark:text-gray-300 hover:text-orange-600 
-                             dark:hover:text-orange-400"
-                  >
-                    {isDark ? (
-                      <>
-                        <Sun className="h-4 w-4" />
-                        Light Mode
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="h-4 w-4" />
-                        Dark Mode
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="px-4 py-2">
-                  <LanguageSelector />
-                </div>
-
-                {session && (
-                  <div className="px-4 py-2">
-                    <ProfileMenu />
-                  </div>
-                )}
-              </nav>
-            </div>
-          )}
         </div>
       </header>
     </>
