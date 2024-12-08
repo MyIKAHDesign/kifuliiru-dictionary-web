@@ -1,14 +1,15 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 interface QuizProgress {
-  id: string;
-  user_id: string;
-  quiz_type: string;
-  current_question: number;
-  answers: Record<string, number>;
-  time_left: number;
-  last_updated: string;
-  is_complete: boolean;
+  id: string; // Attempt ID, assumed to be a UUID
+  user_id: string; // User ID, assumed to be a UUID
+  quiz_type: string; // The type of quiz, e.g., "contributor"
+  current_question: number; // Index of the current question
+  answers: Record<string, string>; // Map of question ID (string) to answer ID (string)
+  time_left: number; // Time left for the current question in seconds
+  score: number; // Number of correct answers
+  last_updated: string; // ISO timestamp of the last update
+  is_complete: boolean; // Whether the quiz is completed
 }
 
 interface ProgressUpdateData {
@@ -26,8 +27,9 @@ interface SaveProgressResult {
 
 interface SaveQuizResponseParams {
   attemptId: string;
-  questionId: number;
-  selectedOptionId: number;
+  // Change questionId and selectedOptionId to string since IDs are UUIDs.
+  questionId: string;
+  selectedOptionId: string;
   isCorrect: boolean;
   timeSpent: number;
   responseOrder: number;
@@ -63,18 +65,29 @@ export async function saveQuizProgress(
   progress: QuizProgress
 ): Promise<void> {
   try {
-    const { error } = await supabase.from("quiz_progress").upsert({
-      id: progress.id,
-      user_id: progress.user_id,
-      current_question: progress.current_question,
-      answers: progress.answers,
-      time_left: progress.time_left,
-      updated_at: new Date().toISOString(),
-    });
+    const { error } = await supabase
+      .from("quiz_progress")
+      .upsert(
+        {
+          id: progress.id, // or the attemptId if it serves as unique key
+          user_id: progress.user_id,
+          quiz_type: progress.quiz_type,
+          current_question: progress.current_question,
+          answers: progress.answers,
+          time_left: progress.time_left,
+          score: progress.score, // Include score field
+          updated_at: new Date().toISOString(),
+          is_complete: progress.is_complete,
+        },
+        {
+          onConflict: "user_id, quiz_type", // specify the unique columns
+        }
+      )
+      .single();
 
     if (error) throw error;
   } catch (error) {
-    console.error("Error saving quiz progress:", error);
+    console.error("Error saving quiz progress:", JSON.stringify(error));
     throw error;
   }
 }
@@ -98,7 +111,7 @@ export async function saveQuizResponse(
 
     if (error) throw error;
   } catch (error) {
-    console.error("Error saving quiz response:", error);
+    console.error("Error saving quiz response:", JSON.stringify(error));
     throw error;
   }
 }
@@ -108,39 +121,67 @@ export async function completeQuizAttempt(
   supabase: SupabaseClient,
   params: CompleteQuizParams
 ): Promise<void> {
-  const passed = params.score >= params.passingScore;
-
   try {
-    // Update quiz attempt
+    // Calculate pass/fail status
+    const passed = params.score >= (params.passingScore ?? 70); // Default passing score to 70 if undefined
+
+    // Update the quiz attempt with the final score and completion details
     const { error: attemptError } = await supabase
       .from("quiz_attempts")
       .update({
-        completed_at: new Date().toISOString(),
-        score: params.score,
-        is_passed: passed,
-        total_questions: params.totalQuestions,
-        passing_score: params.passingScore,
+        score: params.score, // Final calculated score
+        is_passed: passed, // Pass/fail status
+        completed_at: new Date().toISOString(), // Completion timestamp
+        total_questions: params.totalQuestions, // Total number of questions
+        passing_score: params.passingScore, // Passing score for the quiz
       })
-      .eq("id", params.attemptId);
+      .eq("id", params.attemptId); // Match the specific attempt ID
 
-    if (attemptError) throw attemptError;
+    if (attemptError) {
+      console.error("Error updating quiz attempt:", {
+        attemptId: params.attemptId,
+        score: params.score,
+        passed,
+        error: attemptError.message,
+      });
+      throw attemptError;
+    }
 
-    // If passed, update user profile to contributor
+    // If the user passed, update their profile to reflect the new role
     if (passed) {
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
-          role: "contributor",
-          quiz_completed: true,
-          quiz_score: params.score,
-          quiz_completed_at: new Date().toISOString(),
+          role: "contributor", // Update user role to contributor
+          quiz_completed: true, // Mark quiz as completed
+          quiz_score: params.score, // Store the final score
+          quiz_completed_at: new Date().toISOString(), // Timestamp for completion
         })
-        .eq("id", params.userId);
+        .eq("id", params.userId); // Match the specific user ID
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error updating user profile:", {
+          userId: params.userId,
+          score: params.score,
+          error: profileError.message,
+        });
+        throw profileError;
+      }
     }
+
+    console.log("Quiz attempt completed successfully:", {
+      attemptId: params.attemptId,
+      userId: params.userId,
+      score: params.score,
+      passed,
+    });
   } catch (error) {
-    console.error("Error completing quiz attempt:", error);
+    console.error("Error completing quiz attempt:", {
+      attemptId: params.attemptId,
+      userId: params.userId,
+      score: params.score,
+      error: JSON.stringify(error),
+    });
     throw error;
   }
 }
@@ -158,10 +199,14 @@ export async function calculateQuizScore(
 
     if (error) throw error;
 
-    if (!responses?.length) return 0;
+    if (!responses || responses.length === 0) return 0;
 
-    const correctAnswers = responses.filter((r) => r.is_correct).length;
-    return Number(((correctAnswers / responses.length) * 100).toFixed(2));
+    const correctAnswers = responses.filter(
+      (response) => response.is_correct
+    ).length;
+    const totalQuestions = responses.length;
+
+    return Number(((correctAnswers / totalQuestions) * 100).toFixed(2));
   } catch (error) {
     console.error("Error calculating quiz score:", error);
     throw error;
@@ -192,6 +237,7 @@ export async function getQuizAttempt(
 export async function createQuizAttempt(
   supabase: SupabaseClient,
   userId: string,
+  p0: string,
   totalQuestions: number
 ): Promise<string> {
   try {
@@ -204,6 +250,7 @@ export async function createQuizAttempt(
         total_questions: totalQuestions,
         current_question: 0,
         score: 0,
+        percentage: 0,
         answers: {},
       })
       .select()
@@ -214,7 +261,8 @@ export async function createQuizAttempt(
 
     return data.id;
   } catch (error) {
-    console.error("Error creating quiz attempt:", error);
+    console.error("Error creating quiz attempt:", JSON.stringify(error));
+
     throw error;
   }
 }

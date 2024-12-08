@@ -16,14 +16,11 @@ import {
   calculateQuizScore,
   completeQuizAttempt,
   createQuizAttempt,
-  createQuizProgressHandler,
   saveQuizProgress,
-  saveQuizResponse,
 } from "../lib/quiz-progress-handlers";
-import { createQuizHandler } from "../lib/quiz-response-handlers";
 
 interface QuizQuestion {
-  id: number;
+  id: string; // Changed to string for UUID
   question_text: string;
   explanation: string;
   quiz_type: string;
@@ -31,8 +28,8 @@ interface QuizQuestion {
 }
 
 interface QuizOption {
-  id: number;
-  question_id: number;
+  id: string; // Changed to string for UUID
+  question_id: string; // Changed to string for UUID
   option_text: string;
   is_correct: boolean;
   option_order: number;
@@ -44,7 +41,7 @@ interface QuestionWithOptions extends QuizQuestion {
 
 interface QuizState {
   currentQuestionIndex: number;
-  answers: Record<string, number>;
+  answers: Record<string, string>; // Store UUID of selected option
   timeLeft: number;
   score: number;
   hasPassed: boolean;
@@ -58,9 +55,6 @@ const PASSING_SCORE = 70;
 export default function QuizPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
-  // Initialize handlers first
-  const quizResponseHandler = createQuizHandler(supabase);
-  const quizProgressHandler = createQuizProgressHandler(supabase);
 
   const [isLoading, setIsLoading] = useState(true);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
@@ -74,6 +68,19 @@ export default function QuizPage() {
     attemptId: null,
   });
   const [hasStarted, setHasStarted] = useState(false);
+
+  useEffect(() => {
+    // Check for existing progress in localStorage or from an API
+    const savedProgress = JSON.parse(
+      localStorage.getItem("quizProgress") || "null"
+    );
+
+    if (savedProgress && savedProgress.currentQuestionIndex !== undefined) {
+      // Restore the saved progress into state
+      setQuizState(savedProgress);
+      setHasStarted(true); // Update the state to indicate the quiz has started
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -135,75 +142,192 @@ export default function QuizPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (!user) {
+        // Redirect to sign-in page if user is not authenticated
         router.push("/auth/sign-in?redirect=/quiz");
         return;
       }
 
+      // Check if there is existing progress for this user
+      const savedProgress = JSON.parse(
+        localStorage.getItem("quizProgress") || "null"
+      );
+      if (savedProgress && savedProgress.attemptId) {
+        // Restore the saved progress
+        setQuizState(savedProgress);
+        setHasStarted(true);
+        return;
+      }
+
+      // Create a new quiz attempt if no progress exists
       const attemptId = await createQuizAttempt(
         supabase,
         user.id,
-        questions.length
+        "contributor", // Quiz type
+        questions.length // Total number of questions
       );
 
-      setQuizState((prev) => ({
-        ...prev,
+      const initialProgress: QuizState = {
         attemptId,
+        currentQuestionIndex: 0,
         timeLeft: SECONDS_PER_QUESTION,
-      }));
+        answers: {},
+
+        score: 0, // Default score
+        hasPassed: false, // Default pass status
+        isComplete: false, // Default completion status
+      };
+
+      // Save the new progress in both state and localStorage
+      setQuizState(initialProgress);
+      localStorage.setItem("quizProgress", JSON.stringify(initialProgress));
       setHasStarted(true);
     } catch (error) {
       console.error("Error starting quiz:", error);
-      // You might want to show an error message to the user here
     }
   };
 
-  const handleAnswer = async (selectedOptionId: number) => {
-    try {
-      const currentQuestion = questions[quizState.currentQuestionIndex];
+  useEffect(() => {
+    async function loadExistingProgress() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (!quizState.attemptId || !user) return;
+      const { data: existingProgress, error } = await supabase
+        .from("quiz_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("quiz_type", "contributor")
+        .single();
 
-      // Update local state
+      if (error && error.code !== "PGRST202") {
+        console.error("Error fetching existing quiz progress:", error);
+        return;
+      }
+
+      if (existingProgress) {
+        // If progress is found, set the state of the quiz from it
+        setQuizState((prev) => ({
+          ...prev,
+          currentQuestionIndex: existingProgress.current_question,
+          answers: existingProgress.answers,
+          timeLeft: existingProgress.time_left,
+          isComplete: existingProgress.is_complete,
+        }));
+      } else {
+        // No existing progress - start fresh or wait for user to start quiz
+      }
+    }
+
+    loadExistingProgress();
+  }, [supabase]);
+
+  useEffect(() => {
+    async function fetchQuizResults() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: attemptData, error } = await supabase
+          .from("quiz_attempts")
+          .select("score, is_passed")
+          .eq("id", quizState.attemptId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching quiz results:", JSON.stringify(error));
+          return;
+        }
+
+        setQuizState((prev) => ({
+          ...prev,
+          score: attemptData.score ?? 0,
+          hasPassed: attemptData.is_passed ?? false,
+        }));
+      } catch (error) {
+        console.error("Error fetching quiz results:", JSON.stringify(error));
+      }
+    }
+
+    if (quizState.isComplete) {
+      fetchQuizResults();
+    }
+  }, [quizState.isComplete, quizState.attemptId, supabase]);
+
+  useEffect(() => {
+    if (questions.length > 0 && quizState.answers) {
+      // Calculate the score
+      const correctCount = questions.reduce((count, question) => {
+        const userAnswerId = quizState.answers[question.id];
+        const isCorrect = question.options.some(
+          (opt) => opt.is_correct && opt.id === userAnswerId
+        );
+        return count + (isCorrect ? 1 : 0);
+      }, 0);
+
+      const totalQuestions = questions.length;
+      const percentage = (correctCount / totalQuestions) * 100;
+
+      // Update quizState with the score and pass/fail status
       setQuizState((prev) => ({
         ...prev,
-        answers: {
-          ...prev.answers,
-          [currentQuestion.id]: selectedOptionId,
-        },
+        score: correctCount,
+        percentage,
+        hasPassed: percentage >= 70, // Assuming 70% is the passing mark
       }));
+    }
+  }, [questions, quizState.answers]);
 
-      const isCorrect =
-        currentQuestion.options.find((opt) => opt.id === selectedOptionId)
-          ?.is_correct || false;
+  const handleAnswer = async (selectedOptionId: string) => {
+    try {
+      if (!quizState.attemptId) return;
 
-      // Save response
-      await saveQuizResponse(supabase, {
-        attemptId: quizState.attemptId,
-        questionId: currentQuestion.id,
-        selectedOptionId,
-        isCorrect,
-        timeSpent: SECONDS_PER_QUESTION - quizState.timeLeft,
-        responseOrder: quizState.currentQuestionIndex,
-        userId: user.id,
-      });
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-      // Save progress
+      const currentQuestion = questions[quizState.currentQuestionIndex];
+
+      // Calculate if the selected answer is correct
+      const isCorrect = currentQuestion.options.some(
+        (opt) => opt.is_correct && opt.id === selectedOptionId
+      );
+
+      // Declare and calculate the updated score
+      const updatedScore = quizState.score + (isCorrect ? 1 : 0);
+
+      // Save the updated progress
       await saveQuizProgress(supabase, {
-        attempt_id: quizState.attemptId,
+        id: quizState.attemptId,
         user_id: user.id,
+        quiz_type: "contributor",
         current_question: quizState.currentQuestionIndex,
         answers: {
           ...quizState.answers,
           [currentQuestion.id]: selectedOptionId,
         },
         time_left: quizState.timeLeft,
+        last_updated: new Date().toISOString(),
+        is_complete: false,
+        score: updatedScore, // Include the updated score
       });
+
+      // Update local state with the new score and answer
+      setQuizState((prev) => ({
+        ...prev,
+        answers: {
+          ...prev.answers,
+          [currentQuestion.id]: selectedOptionId,
+        },
+        score: updatedScore, // Update the score in local state
+      }));
     } catch (error) {
-      console.error("Error saving answer:", error);
+      console.error("Error in handleAnswer:", JSON.stringify(error));
     }
   };
 
@@ -216,25 +340,42 @@ export default function QuizPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Determine if the current question was answered correctly
+      const currentQuestion = questions[quizState.currentQuestionIndex];
+      const userAnswerId = quizState.answers[currentQuestion.id];
+      const isCorrect = currentQuestion.options.some(
+        (opt) => opt.is_correct && opt.id === userAnswerId
+      );
+
+      // Increment the score if the answer is correct
+      const updatedScore = quizState.score + (isCorrect ? 1 : 0);
+
+      // Save progress, including the updated score
       await saveQuizProgress(supabase, {
-        attempt_id: quizState.attemptId,
+        id: quizState.attemptId,
         user_id: user.id,
+        quiz_type: "contributor",
         current_question: quizState.currentQuestionIndex,
         answers: quizState.answers,
         time_left: quizState.timeLeft,
+        last_updated: new Date().toISOString(),
+        is_complete: false,
+        score: updatedScore, // Save the updated score
       });
 
+      // Move to the next question or complete the quiz
       if (quizState.currentQuestionIndex < questions.length - 1) {
         setQuizState((prev) => ({
           ...prev,
           currentQuestionIndex: prev.currentQuestionIndex + 1,
           timeLeft: SECONDS_PER_QUESTION,
+          score: updatedScore, // Update local score
         }));
       } else {
-        await completeQuiz();
+        await completeQuiz(); // Finalize quiz if it's the last question
       }
     } catch (error) {
-      console.error("Error in handleNext:", error);
+      console.error("Error in handleNext:", JSON.stringify(error));
     }
   };
 
@@ -250,19 +391,17 @@ export default function QuizPage() {
         return;
       }
 
-      // Calculate final score
       const score = await calculateQuizScore(supabase, quizState.attemptId);
+      console.log("Checking the score ....", JSON.stringify(score));
 
-      // Complete the attempt and update user role if passed
       await completeQuizAttempt(supabase, {
         attemptId: quizState.attemptId,
         score,
         totalQuestions: questions.length,
         userId: user.id,
-        passingScore: PASSING_SCORE, // Pass the constant
+        passingScore: PASSING_SCORE,
       });
 
-      // Update local state with results
       setQuizState((prev) => ({
         ...prev,
         score,
@@ -270,14 +409,25 @@ export default function QuizPage() {
         isComplete: true,
       }));
 
-      // If passed, redirect after showing results
+      await saveQuizProgress(supabase, {
+        id: quizState.attemptId,
+        user_id: user.id,
+        quiz_type: "contributor",
+        current_question: quizState.currentQuestionIndex,
+        answers: quizState.answers,
+        time_left: quizState.timeLeft,
+        last_updated: new Date().toISOString(),
+        is_complete: true, // Mark quiz as complete
+        score: quizState.score, // Save the final score
+      });
+
       if (score >= PASSING_SCORE) {
         setTimeout(() => {
           router.push("/contribute");
         }, 3000);
       }
     } catch (error) {
-      console.error("Error completing quiz:", error);
+      console.error("Error completing quiz:", JSON.stringify(error));
     }
   };
 
@@ -288,6 +438,42 @@ export default function QuizPage() {
       </div>
     );
   }
+
+  const QuizResults = () => {
+    const totalQuestions = questions.length;
+    const correctAnswers = questions.reduce((count, question) => {
+      const userAnswerId = quizState.answers[question.id];
+      const isCorrect = question.options.some(
+        (opt) => opt.is_correct && opt.id === userAnswerId
+      );
+      return count + (isCorrect ? 1 : 0);
+    }, 0);
+
+    const percentage = (correctAnswers / totalQuestions) * 100;
+
+    return (
+      <div>
+        <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
+          {quizState.hasPassed ? "Congratulations!" : "Quiz Complete"}
+        </h2>
+
+        <div className="text-center">
+          <div className="text-6xl font-bold mb-4">
+            {Math.round(percentage)}%
+          </div>
+          <Progress value={percentage} className="w-full h-2" />
+        </div>
+
+        <p className="text-center text-gray-600 dark:text-gray-300">
+          {quizState.hasPassed
+            ? `You passed with a score of ${Math.round(percentage)}%!`
+            : `You scored ${Math.round(
+                percentage
+              )}%. You need ${PASSING_SCORE}% to pass. Better luck next time!`}
+        </p>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -430,25 +616,7 @@ export default function QuizPage() {
         </div>
       ) : (
         <div className="max-w-xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
-            {quizState.hasPassed ? "Congratulations!" : "Quiz Complete"}
-          </h2>
-
-          <div className="text-center">
-            <div className="text-6xl font-bold mb-4">
-              {Math.round(quizState.score)}%
-            </div>
-            <Progress value={quizState.score} className="w-full h-2" />
-          </div>
-
-          <p className="text-center text-gray-600 dark:text-gray-300">
-            {quizState.hasPassed
-              ? `You passed with a score of ${Math.round(quizState.score)}%!`
-              : `You scored ${Math.round(
-                  quizState.score
-                )}%. You need ${PASSING_SCORE}% to pass. Better luck next time!`}
-          </p>
-
+          <QuizResults />
           <div className="space-y-4">
             {questions.map((question, index) => (
               <div
@@ -491,7 +659,6 @@ export default function QuizPage() {
               </div>
             ))}
           </div>
-
           <div className="flex justify-center pt-6">
             <button
               className={`w-full py-3 px-6 rounded-lg font-medium transition-colors duration-200 ${

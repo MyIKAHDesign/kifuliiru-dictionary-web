@@ -212,6 +212,17 @@ export interface Database {
           last_quiz_attempt?: string | null;
         };
       };
+      numbers: {
+        Row: {
+          id: string;
+          number: string;
+          value: string | number;
+        };
+        Insert: {
+          number: string;
+          value: string | number;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
