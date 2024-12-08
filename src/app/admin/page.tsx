@@ -15,7 +15,10 @@ import {
 } from "lucide-react";
 import DictionaryManagement from "./dictionary_management";
 import { Database } from "../lib/supabase";
-
+import NumbersManagement from "./NumberManagement";
+import QuizManagement from "./QuizManagement";
+import QuestionsManagement from "./QuestionsManagement";
+import UsersManagement from "./UsersManagement";
 interface Activity {
   type: "new_entry" | "update" | "validation";
   user: string;
@@ -138,22 +141,6 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   </div>
 );
 
-// Create a Numbers Management component
-const NumbersManagement: React.FC = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-semibold mb-4">Number System Management</h2>
-    <p>Numbers management interface coming soon...</p>
-  </div>
-);
-
-// Create a Users Management component
-const UsersManagement: React.FC = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-semibold mb-4">User Management</h2>
-    <p>User management interface coming soon...</p>
-  </div>
-);
-
 const AdminDashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [pendingEntries] = useState(5);
@@ -213,8 +200,10 @@ const AdminDashboard: React.FC = () => {
   const sidebarItems = [
     { id: "overview", label: "Overview", icon: Settings },
     { id: "dictionary", label: "Dictionary Entries", icon: Book },
-    { id: "numbers", label: "Number System", icon: Hash },
+    { id: "numbers", label: "Numbers Management", icon: Hash },
     { id: "users", label: "User Management", icon: Users },
+    { id: "quiz-management", label: "Quiz Management", icon: Check }, // New item
+    { id: "questions", label: "Questions Management", icon: Check }, // New section for Questions
   ];
 
   const stats: Stat[] = [
@@ -253,6 +242,10 @@ const AdminDashboard: React.FC = () => {
         return <NumbersManagement />;
       case "users":
         return <UsersManagement />;
+      case "quiz-management":
+        return <QuizManagement />;
+      case "questions":
+        return <QuestionsManagement />; // Render Questions Management
       default:
         return (
           <DashboardOverview

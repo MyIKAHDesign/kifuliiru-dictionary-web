@@ -410,7 +410,7 @@ export default function DictionaryContent({
                     </div>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      <span>{word.owner_id ? "Kabemba A." : "Anonymous"}</span>
+                      <span>{"Ayivugwe Kabemba and Team"}</span>
                     </div>
                   </div>
                 </CardFooter>

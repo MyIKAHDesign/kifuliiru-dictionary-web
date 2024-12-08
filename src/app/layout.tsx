@@ -22,7 +22,8 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = generateMetadata({
   title: "Home",
-  description: "Discover the beauty of the Kifuliiru language",
+  description:
+    "Kifuliiru. Ibufuliiru. Abafuliiru. Discover the beauty of the Kifuliiru language, the language of the Bafuliiru people",
   keywords: ["Kifuliiru", "dictionary", "language", "learning", "translation"],
   openGraph: {
     images: [

@@ -104,6 +104,7 @@ export function Header() {
     { name: "Kifuliiru", icon: Globe, path: "/kifuliiru" },
     { name: "Ibufuliiru", icon: Building, path: "/ibufuliiru" },
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
+    { name: "About Us", icon: Grid, path: "/about" },
   ];
 
   const LanguageSelector = () => (
