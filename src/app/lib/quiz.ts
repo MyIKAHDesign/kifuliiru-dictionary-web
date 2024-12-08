@@ -1,6 +1,7 @@
 // lib/quiz.ts
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { QuizQuestion, QuizAttempt, QuizResponse } from "@/types/quiz";
+import { QuizQuestion } from "./types/quiz";
+import { QuizAttempt, QuizResponse } from "../quiz/lib/types/quiz";
 
 export async function fetchQuizQuestions(
   quizType: string = "contributor"
