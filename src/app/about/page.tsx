@@ -18,6 +18,7 @@ import {
   MessageCircle,
   LucideIcon,
 } from "lucide-react";
+import TeamSection from "./components/TeamSection";
 
 // Type definitions
 interface SectionTitleProps {
@@ -365,6 +366,7 @@ const AboutPage: React.FC = () => {
           </div>
         </div>
       </section>
+      <TeamSection />
     </div>
   );
 };

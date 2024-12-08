@@ -264,20 +264,28 @@ export default function DictionaryContent({
             <DropdownMenuTrigger asChild>
               <button
                 className="flex items-center gap-2 px-4 py-3 border rounded-lg 
-                         bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700
-                         hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700
+                 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <Globe2 className="h-5 w-5" />
                 <span>{languageLabels[displayLanguage]}</span>
                 <ChevronDown className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 
+               shadow-lg rounded-lg p-2"
+            >
               {Object.entries(languageLabels).map(([key, label]) => (
                 <DropdownMenuItem
                   key={key}
                   onClick={() => setDisplayLanguage(key as LanguageOption)}
-                  className="cursor-pointer"
+                  className={`cursor-pointer px-4 py-2 rounded-md transition-colors ${
+                    displayLanguage === key
+                      ? "text-orange-600 font-bold"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300"
+                  }`}
                 >
                   {label}
                 </DropdownMenuItem>
