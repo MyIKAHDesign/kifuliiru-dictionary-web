@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // Import usePathname
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/auth-helpers-nextjs";
@@ -26,7 +26,7 @@ import {
 import LanguageSelector from "./LanguageSelector";
 
 export function Header() {
-  const pathname = usePathname(); // Get current path
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [isDark, setIsDark] = useState(false);
@@ -77,6 +77,11 @@ export function Header() {
     updateTheme(newDark);
   };
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   const getNavigationLinks = () => [
     { name: "Home", icon: Home, path: "/" },
     { name: "Dictionary", icon: BookOpen, path: "/dictionary" },
@@ -98,6 +103,7 @@ export function Header() {
       <DevelopmentBanner />
       <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div className="container mx-auto px-4">
+          {/* Main Header Content */}
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link
@@ -154,10 +160,7 @@ export function Header() {
                   >
                     <span className="relative flex items-center gap-2">
                       <span>Sign In</span>
-                      <ArrowRight
-                        className="w-4 h-4 transition-transform duration-300 
-                                         group-hover:translate-x-1"
-                      />
+                      <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                     </span>
                   </Button>
                 </Link>
@@ -169,6 +172,8 @@ export function Header() {
               className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 
                        transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-expanded={isMenuOpen}
+              aria-label="Toggle menu"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -177,6 +182,70 @@ export function Header() {
               )}
             </button>
           </div>
+
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
+              <nav className="flex flex-col space-y-4 px-4">
+                {getNavigationLinks().map((link) => (
+                  <Link
+                    key={link.path}
+                    href={link.path}
+                    className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-colors ${
+                      pathname === link.path
+                        ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    <span>{link.name}</span>
+                  </Link>
+                ))}
+
+                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between px-3">
+                    <button
+                      onClick={toggleTheme}
+                      className="flex items-center gap-2 py-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      {isDark ? (
+                        <>
+                          <Sun className="h-5 w-5" />
+                          <span>Light Mode</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="h-5 w-5" />
+                          <span>Dark Mode</span>
+                        </>
+                      )}
+                    </button>
+                    <LanguageSelector />
+                  </div>
+
+                  {session ? (
+                    <div className="px-3">
+                      <ProfileMenu />
+                    </div>
+                  ) : (
+                    <Link
+                      href="/auth/sign-in"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block px-3"
+                    >
+                      <Button
+                        variant="default"
+                        className="w-full bg-gradient-to-r from-orange-600 to-orange-500"
+                      >
+                        Sign In
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
     </>
