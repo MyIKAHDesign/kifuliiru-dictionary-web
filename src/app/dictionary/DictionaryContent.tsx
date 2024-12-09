@@ -27,6 +27,7 @@ import {
 } from "@/app/components/ui/dropdown-menu";
 import { DictionaryEntry } from "@/app/lib/supabase";
 import { Skeleton } from "../components/ui/skeleton";
+import Highlighter from "react-highlight-words";
 
 const FILTERS = ["all", "noun", "verb", "phrase", "adjective"] as const;
 type FilterType = (typeof FILTERS)[number];
@@ -391,18 +392,34 @@ export default function DictionaryContent({
                 </CardHeader>
 
                 <CardContent className="space-y-3">
+                  {/* Highlighting the main word */}
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    <Highlighter
+                      highlightClassName="bg-yellow-200 dark:bg-yellow-400"
+                      searchWords={[searchTerm]}
+                      autoEscape={true}
+                      textToHighlight={word.igambo}
+                    />
+                  </p>
+
+                  {/* Highlighting the translation */}
                   <p className="text-gray-700 dark:text-gray-300 text-lg">
-                    {
-                      word[
-                        displayLanguage === "english"
-                          ? "kingereza"
-                          : displayLanguage === "french"
-                          ? "kifaransa"
-                          : displayLanguage === "swahili"
-                          ? "kiswahili"
-                          : "kifuliiru"
-                      ]
-                    }
+                    <Highlighter
+                      highlightClassName="bg-yellow-200 dark:bg-yellow-400"
+                      searchWords={[searchTerm || ""]}
+                      autoEscape={true}
+                      textToHighlight={
+                        word[
+                          displayLanguage === "english"
+                            ? "kingereza"
+                            : displayLanguage === "french"
+                            ? "kifaransa"
+                            : displayLanguage === "swahili"
+                            ? "kiswahili"
+                            : "kifuliiru"
+                        ]
+                      }
+                    />
                   </p>
                 </CardContent>
 

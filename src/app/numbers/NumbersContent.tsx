@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/app/components/ui/dropdown-menu";
 import type { NumberEntry } from "@/app/lib/supabase";
+import Highlighter from "react-highlight-words";
 
 interface NumbersContentProps {
   initialNumbers: NumberEntry[];
@@ -154,20 +155,30 @@ export default function NumbersContent({
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-xl font-medium text-gray-900 dark:text-gray-100">
-                    {number.kifuliiru}
+                    <Highlighter
+                      highlightClassName="bg-yellow-300 dark:bg-yellow-500"
+                      searchWords={[searchTerm]}
+                      autoEscape={true}
+                      textToHighlight={number.kifuliiru}
+                    />
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {
-                      number[
-                        displayLanguage === "english"
-                          ? "kingereza"
-                          : displayLanguage === "french"
-                          ? "kifaransa"
-                          : displayLanguage === "swahili"
-                          ? "kiswahili"
-                          : "kifuliiru"
-                      ]
-                    }
+                    <Highlighter
+                      highlightClassName="bg-yellow-300 dark:bg-yellow-500"
+                      searchWords={[searchTerm]}
+                      autoEscape={true}
+                      textToHighlight={
+                        number[
+                          displayLanguage === "english"
+                            ? "kingereza"
+                            : displayLanguage === "french"
+                            ? "kifaransa"
+                            : displayLanguage === "swahili"
+                            ? "kiswahili"
+                            : "kifuliiru"
+                        ]
+                      }
+                    />
                   </p>
                 </div>
               </CardContent>
