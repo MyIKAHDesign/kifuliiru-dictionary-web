@@ -90,11 +90,11 @@ export default function DictionaryContent({
     }
 
     setIsLoading(true);
-    try {
-      // First, log the search term for debugging
-      console.log("Searching for:", term);
 
-      // Construct the search query with proper typing
+    try {
+      console.log("Initiating search for term:", term);
+
+      // Single-line query string for Supabase
       const { data, error } = await supabase
         .from("magambo")
         .select("*")
@@ -103,40 +103,35 @@ export default function DictionaryContent({
         )
         .order("created_at", { ascending: false });
 
-      // If there's a Supabase error, throw it with details
       if (error) {
-        console.error("Supabase error details:", {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-        });
-        throw new Error(`Supabase query failed: ${error.message}`);
+        console.error("Supabase query error:", JSON.stringify(error));
+        throw new Error(`Failed to fetch results: ${error.message}`);
       }
 
-      // Log the results count for debugging
-      console.log(`Found ${data?.length || 0} results`);
+      if (!data || data.length === 0) {
+        console.warn("No results found for:", term);
+        setWords([]);
+        return;
+      }
 
-      // Update state with results
-      setWords(data || []);
+      console.log(`Search results: ${data.length} entries found`);
+
+      const sanitizedData = data.map((entry) => ({
+        ...entry,
+        igambo: entry.igambo || "",
+        kifuliiru: entry.kifuliiru || "",
+        kingereza: entry.kingereza || "",
+        kifaransa: entry.kifaransa || "",
+        kiswahili: entry.kiswahili || "",
+      }));
+
+      setWords(sanitizedData);
       setVisibleWords(WORDS_PER_PAGE);
 
-      // Update URL
-      const newUrl = term.trim()
-        ? `/dictionary?q=${encodeURIComponent(term.trim())}`
-        : "/dictionary";
+      const newUrl = `/dictionary?q=${encodeURIComponent(term.trim())}`;
       router.replace(newUrl);
     } catch (error) {
-      // Enhanced error handling
-      if (error instanceof Error) {
-        console.error("Search error:", {
-          message: error.message,
-          stack: error.stack,
-        });
-      } else {
-        console.error("Unknown search error:", error);
-      }
-
-      // Set empty results and show user feedback
+      console.error("Error during search:", error);
       setWords([]);
     } finally {
       setIsLoading(false);
@@ -396,9 +391,9 @@ export default function DictionaryContent({
                   <p className="text-xl font-bold text-gray-900 dark:text-white">
                     <Highlighter
                       highlightClassName="bg-yellow-200 dark:bg-yellow-400"
-                      searchWords={[searchTerm]}
+                      searchWords={[searchTerm || ""]}
                       autoEscape={true}
-                      textToHighlight={word.igambo}
+                      textToHighlight={word.igambo || ""} // Provide a fallback empty string
                     />
                   </p>
 
@@ -417,7 +412,7 @@ export default function DictionaryContent({
                             : displayLanguage === "swahili"
                             ? "kiswahili"
                             : "kifuliiru"
-                        ]
+                        ] || "" // Provide a fallback empty string
                       }
                     />
                   </p>
