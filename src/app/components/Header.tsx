@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   ArrowRight,
+  Smartphone,
 } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
 
@@ -96,6 +97,7 @@ export function Header() {
     { name: "Ibufuliiru", icon: Building, path: "/ibufuliiru" },
     { name: "Abafuliiru", icon: Users, path: "/abafuliiru" },
     { name: "About Us", icon: Grid, path: "/about" },
+    { name: "Mobile App", icon: Smartphone, path: "/mobile-app" },
   ];
 
   return (
