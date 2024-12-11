@@ -89,7 +89,7 @@ export function Header() {
     { name: "Numbers", icon: Hash, path: "/numbers" },
     { name: "Categories", icon: Grid, path: "/categories" },
     {
-      name: session ? "Contribute" : "Become a Contributor",
+      name: "Contribute",
       icon: PenSquare,
       path: session ? "/contribute" : "/auth/sign-in",
     },
