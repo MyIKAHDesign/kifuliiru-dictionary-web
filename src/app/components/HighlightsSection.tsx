@@ -49,7 +49,7 @@ export default function HighlightsSection() {
   ];
 
   return (
-    <section className="py-16 px-4">
+    <section className="w-full bg-blue-200/30 dark:bg-blue-900/20 py-12">
       <div className="container mx-auto max-w-6xl">
         {/* Section Header */}
         <div
