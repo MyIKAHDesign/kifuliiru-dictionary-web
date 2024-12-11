@@ -15,8 +15,6 @@ import {
   ChevronRight,
   Star,
   MessageSquare,
-  Moon,
-  Sun,
 } from "lucide-react";
 import { Toaster } from "../components/ui/toaster";
 
@@ -53,10 +51,6 @@ export default function MobileAppShowcase() {
       duration: 3000,
       className: isDarkMode ? "dark" : "",
     });
-  };
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
   };
 
   const screenshots = [
@@ -128,18 +122,6 @@ export default function MobileAppShowcase() {
     <div
       className={`min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300`}
     >
-      {/* Theme Toggle */}
-      <button
-        onClick={toggleDarkMode}
-        className="fixed top-4 right-4 z-50 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors duration-300"
-      >
-        {isDarkMode ? (
-          <Sun className="h-5 w-5" />
-        ) : (
-          <Moon className="h-5 w-5" />
-        )}
-      </button>
-
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-orange-400/90 to-orange-500/90 dark:from-orange-600/80 dark:to-orange-700/80">
         <motion.div
