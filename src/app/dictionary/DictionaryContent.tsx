@@ -387,7 +387,7 @@ export default function DictionaryContent({
                 </CardHeader>
 
                 <CardContent className="space-y-3">
-                  {/* Highlighting the main word */}
+                  {/* Highlighting the main word
                   <p className="text-xl font-bold text-gray-900 dark:text-white">
                     <Highlighter
                       highlightClassName="bg-yellow-200 dark:bg-yellow-400"
@@ -395,7 +395,7 @@ export default function DictionaryContent({
                       autoEscape={true}
                       textToHighlight={word.igambo || ""} // Provide a fallback empty string
                     />
-                  </p>
+                  </p> */}
 
                   {/* Highlighting the translation */}
                   <p className="text-gray-700 dark:text-gray-300 text-lg">
