@@ -58,7 +58,7 @@ export function SignInForm() {
         <Button
           variant="outline"
           onClick={() => handleSocialLogin("google")}
-          className="relative h-12 bg-white dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800"
+          className="relative h-12 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800  dark:text-gray-400 dark:hover:text-gray-50"
           disabled={loading}
         >
           <div className="absolute left-4 top-1/2 -translate-y-1/2">
