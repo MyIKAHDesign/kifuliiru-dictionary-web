@@ -21,7 +21,7 @@ interface UserProfile {
   id: string;
   full_name?: string;
   avatar_url?: string;
-  role?: string;
+  role?: "super_admin" | "admin" | "editor" | "viewer";
   email?: string;
 }
 
@@ -69,9 +69,9 @@ export function ProfileMenu() {
   };
 
   const handleDashboard = () => {
-    if (user?.role === "admin") {
+    if (user?.role === "super_admin") {
       router.push("/admin");
-    } else if (user?.role === "contributor") {
+    } else if (user?.role === "editor") {
       router.push("/contribute");
     } else {
       router.push("/dashboard");
@@ -95,31 +95,44 @@ export function ProfileMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
-        <div className="flex items-center gap-2 p-2">
-          <UserCircle className="h-4 w-4 opacity-70" />
+      <DropdownMenuContent
+        className="w-56 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg"
+        align="end"
+      >
+        <div className="flex items-center gap-2 p-3 bg-orange-50/50 dark:bg-orange-900/20 rounded-t-md">
+          <UserCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
           <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium">{user.full_name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {user.full_name}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {user.email}
+            </p>
           </div>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleDashboard}>
+        <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
+        <DropdownMenuItem
+          onClick={handleDashboard}
+          className="p-3 focus:bg-gray-100 dark:focus:bg-gray-700"
+        >
           <LayoutDashboard className="mr-2 h-4 w-4" />
-          {user.role === "admin"
+          {user.role === "super_admin"
             ? "Admin Dashboard"
-            : user.role === "contributor"
+            : user.role === "editor"
             ? "Contributor Dashboard"
             : "Dashboard"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/settings")}>
+        <DropdownMenuItem
+          onClick={() => router.push("/settings")}
+          className="p-3 focus:bg-gray-100 dark:focus:bg-gray-700"
+        >
           <Settings className="mr-2 h-4 w-4" />
           Settings
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
         <DropdownMenuItem
           onClick={handleSignOut}
-          className="text-red-600 dark:text-red-400"
+          className="p-3 text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
