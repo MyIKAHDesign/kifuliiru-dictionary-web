@@ -17,7 +17,7 @@ export default function SignInPage() {
               Welcome Back
             </h1>
             <p className="mt-3 text-gray-600 dark:text-gray-400">
-              Sign in to continue exploring Kifuliiru language
+              Sign in to contribute and access features
             </p>
           </div>
 
