@@ -13,7 +13,7 @@ export default function SignUpPage() {
               Join Kifuliiru Dictionary
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Create an account to contribute and access all features
+              Create an account to contribute and access features
             </p>
           </div>
 
