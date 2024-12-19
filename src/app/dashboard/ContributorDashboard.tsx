@@ -2,6 +2,7 @@ import React from "react";
 import ContributionGraphs from "./ContributionGraphs";
 import RecentActivity from "./RecentActivity";
 import AchievementsSection from "./AchievementsSection";
+import { QuizStatsSection } from "./QuizStatsSection";
 
 export default function ContributorDashboard() {
   return (
@@ -22,8 +23,13 @@ export default function ContributorDashboard() {
         </div>
 
         {/* Achievements Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
           <AchievementsSection />
+        </div>
+
+        {/* Quiz Achievements Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+          <QuizStatsSection />
         </div>
       </div>
     </div>
