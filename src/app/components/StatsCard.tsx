@@ -1,19 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { ColorType, StatsCardProps } from "../lib/types/stats.ts";
 
-interface StatsCardProps {
-  title: string;
-  count: number;
-  description?: string;
-  buttonLabel?: string;
-  buttonLink?: string;
-  color?: "indigo" | "purple" | "blue" | "teal";
-  icon?: React.ReactNode;
-  delay?: number;
-}
-
-const colorClasses = {
+const colorClasses: Record<ColorType, string> = {
   indigo:
     "from-indigo-500/20 to-indigo-500/0 text-indigo-600 dark:text-indigo-400",
   purple:
@@ -22,62 +12,79 @@ const colorClasses = {
   teal: "from-teal-500/20 to-teal-500/0 text-teal-600 dark:text-teal-400",
 };
 
-function easeOutExpo(t: number): number {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-}
-
 export default function StatsCard({
   title,
   count,
   description,
   buttonLabel,
   buttonLink,
-  color = "indigo",
+  color,
   icon: Icon,
   delay = 0,
 }: StatsCardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedCount, setDisplayedCount] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const intersectionRef = useRef<IntersectionObserver>();
+  const animationFrameRef = useRef<number>();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, delay);
+    // Create intersection observer
+    intersectionRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          intersectionRef.current?.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
 
-    return () => clearTimeout(timer);
-  }, [delay]);
+    if (cardRef.current) {
+      intersectionRef.current.observe(cardRef.current);
+    }
+
+    return () => intersectionRef.current?.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isVisible) return;
 
-    let startTime: number;
-    const duration = 2000; // 2 seconds for count animation
+    const startTime = performance.now();
+    const duration = 2000; // 2 seconds animation
 
-    function animate(currentTime: number) {
-      if (!startTime) startTime = currentTime;
+    const animateCount = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      const easedProgress = easeOutExpo(progress);
-      setDisplayedCount(Math.round(easedProgress * count));
+      // Easing function
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+
+      setDisplayedCount(Math.round(easeOutQuart * count));
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        animationFrameRef.current = requestAnimationFrame(animateCount);
       }
-    }
+    };
 
-    requestAnimationFrame(animate);
+    animationFrameRef.current = requestAnimationFrame(animateCount);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [count, isVisible]);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}k+`;
-    }
-    return num.toString();
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M+`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}k+`;
+    return num.toLocaleString();
   };
 
   return (
     <div
+      ref={cardRef}
       className={`
         relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 
         shadow-lg hover:shadow-xl transition-all duration-500
@@ -86,9 +93,8 @@ export default function StatsCard({
         } 
         before:opacity-20 before:transition-opacity hover:before:opacity-30
         transform ${
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-16 opacity-0"
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         }
-        hover:scale-105
       `}
       style={{
         transitionDelay: `${delay}ms`,
@@ -97,90 +103,45 @@ export default function StatsCard({
       }}
     >
       <div className="relative z-10">
-        {/* Header with slide-in animation */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3
-            className={`
-              text-lg font-semibold text-gray-800 dark:text-gray-200
-              transform transition-all duration-500 delay-100
-              ${
-                isVisible
-                  ? "translate-x-0 opacity-100"
-                  : "-translate-x-8 opacity-0"
-              }
-            `}
-            style={{ transitionDelay: `${delay + 100}ms` }}
-          >
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
           </h3>
           {Icon && (
             <div
               className={`
-                w-10 h-10 rounded-full bg-gradient-to-br ${colorClasses[color]} 
-                bg-opacity-10 flex items-center justify-center
-                transform transition-all duration-500
-                hover:rotate-12 hover:scale-110
-                ${isVisible ? "rotate-0 opacity-100" : "rotate-45 opacity-0"}
-              `}
-              style={{ transitionDelay: `${delay + 200}ms` }}
+              p-2 rounded-lg bg-gradient-to-br ${colorClasses[color]} bg-opacity-10
+              transform transition-transform duration-300 hover:scale-110 hover:rotate-12
+            `}
             >
-              {Icon}
+              <Icon className="h-6 w-6" />
             </div>
           )}
         </div>
 
-        {/* Count with bounce animation */}
-        <div className="mb-4">
-          <p
-            className={`
-              text-4xl font-bold ${colorClasses[color]}
-              transform transition-all duration-500
-              ${isVisible ? "scale-100 opacity-100" : "scale-50 opacity-0"}
-            `}
-            style={{ transitionDelay: `${delay + 300}ms` }}
-          >
+        {/* Count and Description */}
+        <div className="space-y-1">
+          <p className={`text-3xl font-bold ${colorClasses[color]}`}>
             {formatNumber(displayedCount)}
           </p>
-          {description && (
-            <p
-              className={`
-                mt-1 text-sm text-gray-600 dark:text-gray-400
-                transform transition-all duration-500
-                ${
-                  isVisible
-                    ? "translate-y-0 opacity-100"
-                    : "translate-y-4 opacity-0"
-                }
-              `}
-              style={{ transitionDelay: `${delay + 400}ms` }}
-            >
-              {description}
-            </p>
-          )}
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {description}
+          </p>
         </div>
 
-        {/* Button with fade-in animation */}
+        {/* Action Button */}
         {buttonLabel && buttonLink && (
-          <div
-            className={`
-              transform transition-all duration-500
-              ${
-                isVisible
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-4 opacity-0"
-              }
-            `}
-            style={{ transitionDelay: `${delay + 500}ms` }}
-          >
+          <div className="mt-4">
             <Link
               href={buttonLink}
               className={`
-                group inline-flex items-center gap-2 text-sm ${colorClasses[color]} 
-                hover:underline
+                inline-flex items-center gap-2 text-sm font-medium ${colorClasses[color]}
+                hover:underline transition-all duration-300
               `}
             >
               {buttonLabel}
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         )}

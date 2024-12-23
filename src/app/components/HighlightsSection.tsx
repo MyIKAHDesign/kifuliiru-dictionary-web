@@ -16,6 +16,7 @@ interface HighlightItem {
   icon: LucideIcon;
   gradientFrom: string;
   gradientTo: string;
+  link: string;
 }
 
 export default function HighlightsSection() {
@@ -30,12 +31,13 @@ export default function HighlightsSection() {
     {
       id: "word-of-day",
       title: "Word of the Day",
-      content: "Karisimbi",
-      translation: "Mountain of the gods",
-      example: "Karisimbi yaliha bwenêne",
+      content: "Umuundu",
+      translation: "A person",
+      example: "Umuundu mwiija amukolera abaandi baandu.",
       icon: Star,
       gradientFrom: "from-purple-500",
       gradientTo: "to-indigo-600",
+      link: "/word-of-day",
     },
     {
       id: "popular",
@@ -45,6 +47,7 @@ export default function HighlightsSection() {
       icon: TrendingUp,
       gradientFrom: "from-amber-500",
       gradientTo: "to-orange-600",
+      link: "/categories",
     },
   ];
 
@@ -166,6 +169,7 @@ export default function HighlightsSection() {
                     `}
                     >
                       <button
+                        onClick={() => (window.location.href = item.link)}
                         className={`
                         flex items-center gap-2 text-sm font-medium
                         text-gray-900 dark:text-white hover:gap-3 transition-all
